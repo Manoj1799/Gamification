@@ -1,6 +1,6 @@
 import { useState } from "react";
-import Dashboard from "./pages/Dashboard";
-import Trading from "./pages/Trading";
+import Dashboard from "./pages/dashboard";
+import Trading from "./pages/trading";
 
 function App() {
   const [activePage, setActivePage] = useState("home");
