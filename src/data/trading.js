@@ -256,8 +256,8 @@ export const trading = {
 
     aim: "Build database and skeleton before backtesting.",
 
-    startDate: "2026-08-31",
-    endDate: "2026-09-15",
+    startDate: "2026-09-07",
+    endDate: "2026-09-22",
   },
 
 
