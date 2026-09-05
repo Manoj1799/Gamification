@@ -1,20 +1,3 @@
-
-import { useEffect, useState } from "react";
-
-import { trading } from "../data/trading";
-
-import {
-  calculateDaysRemaining,
-  calculateQuestProgress,
-} from "../logic/trading";
-
-import { calculateLevel } from "../logic/xp";
-
-import {
-  loadTradingRecord,
-  saveCurrentTradingRecord,
-} from "../services/tradingService";
-
 import {
   TrendingUp,
   Target,
@@ -22,121 +5,121 @@ import {
   Clock,
   Check,
   ChevronRight,
+  ChevronDown,
   Sparkles,
   Zap,
+  Lock,
+  Map,
 } from "lucide-react";
 
-function Trading() {
-  const [questList, setQuestList] = useState([]);
-  const [baseXP, setBaseXP] = useState(trading.skill.currentXP);
-  const [isLoading, setIsLoading] = useState(true);
+import { trading } from "../data/trading";
+import { useTrading } from "../hooks/useTrading";
 
-  useEffect(() => {
-    async function loadTrading() {
-      const record = await loadTradingRecord();
 
-      setQuestList(record.quests);
-      setBaseXP(record.currentXP);
+/* =========================================================
+   TRADING PAGE
+========================================================= */
 
-      setIsLoading(false);
-    }
+function Trading({ setActivePage }) {
 
-    loadTrading();
-  }, []);
+  const {
+    currentLevelXP,
+    months,
+    currentXP,
+    currentLevel,
+    nextLevelTotalXP,
+    xpProgress,
+    xpRequiredForNextLevel,
+    phaseProgress,
+    expandedMonths,
+    isLoading,
+    daysRemaining,
+    calculateMonthProgress,
+    calculateMonthXP,
+    toggleMonth,
+    toggleMission,
 
-  const daysRemaining = calculateDaysRemaining(
-    trading.phase.endDate
-  );
+  } = useTrading();
 
-  const phaseProgress =
-    questList.length > 0
-      ? calculateQuestProgress(questList)
-      : 0;
 
-  const earnedQuestXP = questList
-    .filter((quest) => quest.done)
-    .reduce(
-      (total, quest) => total + quest.xp,
-      0
-    );
-
-  const currentXP = baseXP + earnedQuestXP;
-
-  const currentLevel = calculateLevel(currentXP);
-
-  const xpProgress = Math.min(
-    100,
-    Math.round(
-      (currentXP / trading.skill.nextLevelXP) * 100
-    )
-  );
-
-  const toggleQuest = async (id) => {
-    const quest = questList.find(
-      (quest) => quest.id === id
-    );
-
-    if (!quest) return;
-
-    const updatedQuests = questList.map((quest) =>
-      quest.id === id
-        ? { ...quest, done: !quest.done }
-        : quest
-    );
-
-    const newEarnedXP = updatedQuests
-      .filter((quest) => quest.done)
-      .reduce(
-        (total, quest) => total + quest.xp,
-        0
-      );
-
-    const newCurrentXP = baseXP + newEarnedXP;
-
-    setQuestList(updatedQuests);
-
-    await saveCurrentTradingRecord(
-      updatedQuests,
-      baseXP
-    );
-  };
+  /* =========================================================
+     LOADING SCREEN
+  ========================================================= */
 
   if (isLoading) {
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+
         <div className="flex flex-col items-center gap-3">
+
           <div className="rounded-2xl bg-indigo-600 p-3 text-white shadow-lg shadow-indigo-200">
+
             <TrendingUp size={24} />
+
           </div>
 
           <p className="font-bold text-slate-500">
             Loading your journey...
           </p>
+
         </div>
+
       </div>
     );
+
   }
+
+
+  /* =========================================================
+     MAIN PAGE
+  ========================================================= */
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 text-slate-900">
 
       <main className="mx-auto max-w-md px-4 pb-10 pt-6">
 
-        {/* Header */}
-        <header className="mb-6">
 
-          <div className="mb-2 flex items-center gap-2">
-            <div className="rounded-xl bg-indigo-100 p-2 text-indigo-600">
-              <TrendingUp size={16} />
+        {/* ==================================================
+            HEADER
+        ================================================== */}
+
+        <header className="mb-5">
+          <div className="flex items-center justify-between">
+
+            {/* Left: Trading title */}
+            <div className="flex items-center gap-2">
+              <button
+                // Business purpose:
+                // Clicking the Trading icon opens the detailed Trading Skill Journey page.
+                // App.jsx remains responsible for controlling which page is currently visible.
+                onClick={() => setActivePage("journeyMap")}
+                className="rounded-xl bg-indigo-100 p-2 text-indigo-600 transition hover:bg-indigo-200 active:scale-95" >
+                <Map size={16} />
+              </button>
+
+              <p className="text-sm font-black uppercase tracking-wider text-indigo-500">
+                Trading
+              </p>
             </div>
 
-            <p className="text-sm font-black uppercase tracking-wider text-indigo-500">
-              Trading
-            </p>
+            {/* Right: Total XP circle */}
+            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500 p-[2px] shadow-lg shadow-orange-200">
+              <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-white">
+                <span className="text-[8px] font-black uppercase leading-none tracking-wide text-slate-400">
+                  Total XP
+                </span>
+
+                <span className="mt-1 text-sm font-black leading-none text-slate-800">
+                  {currentXP.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
           </div>
 
-          <div className="flex items-end justify-between">
-
+          <div className="mt-2 flex items-end justify-between">
             <div>
               <h1 className="text-3xl font-black tracking-tight">
                 Skill Journey
@@ -146,196 +129,157 @@ function Trading() {
                 Build skill. Complete phases. Level up.
               </p>
             </div>
-
-            <Sparkles
-              size={24}
-              className="mb-1 text-amber-400"
-            />
-
           </div>
-
         </header>
 
 
-        {/* Skill Level */}
-        <section className="relative mb-5 overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-6 text-white shadow-xl shadow-indigo-200">
+        {/* ==================================================
+            SKILL XP
+        ================================================== */}
 
-          {/* Decorative circles */}
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10" />
-          <div className="absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-cyan-400/10" />
+        {/* ==================================================
+    SKILL XP
+================================================== */}
 
-          <div className="relative">
+        <section
+          className={`relative mb-5 overflow-hidden rounded-2xl bg-gradient-to-br ${currentLevel.theme} px-5 py-4 text-white shadow-lg`}
+        >
 
-            <div className="mb-5 flex items-center justify-between">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10" />
+
+          <div className="relative flex items-center justify-between">
+
+            <div className="flex items-center gap-4">
+
+              {/* LEVEL */}
 
               <div>
-                <p className="mb-1 text-xs font-black uppercase tracking-widest text-indigo-200">
+
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
                   Skill Level
                 </p>
 
-                <p className="text-6xl font-black tracking-tight">
-                  {currentLevel}
+                <p className="text-4xl font-black leading-none">
+                  {currentLevel.level}
                 </p>
+
+                <p className="mt-1 text-xs font-black uppercase tracking-wider text-white/70">
+                  {currentLevel.name}
+                </p>
+
               </div>
 
-              <div className="rounded-2xl bg-white/15 p-4 backdrop-blur-sm">
-                <TrendingUp size={30} />
+              <div className="h-10 w-px bg-white/20" />
+
+              {/* XP */}
+
+              <div>
+
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
+                  Skill XP
+                </p>
+
+                <p className="text-lg font-black">
+                  {currentLevelXP.toLocaleString()}
+                  {" / "}
+                  {xpRequiredForNextLevel.toLocaleString()}
+                </p>
+
               </div>
 
             </div>
 
-            <div className="mb-2 flex justify-between text-xs font-black">
-              <span className="text-indigo-200">
-                SKILL XP
-              </span>
+            <button
+              onClick={() => setActivePage("tradingLevelLadder")}
+              className="rounded-xl bg-white/15 p-2.5 backdrop-blur-sm hover:bg-white/25 active:scale-95"
+            >
+              <TrendingUp size={22} />
+            </button>
 
-              <span>
-                {currentXP.toLocaleString()} /{" "}
-                {trading.skill.nextLevelXP.toLocaleString()} XP
-              </span>
-            </div>
+          </div>
 
-            <div className="h-3 overflow-hidden rounded-full bg-black/20">
+          {/* XP BAR */}
 
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-sky-300 to-white transition-all duration-700"
-                style={{
-                  width: `${xpProgress}%`,
-                }}
-              />
+          <div className="relative mt-3 h-2 overflow-hidden rounded-full bg-black/20">
 
-            </div>
-
-            <div className="mt-3 flex items-center gap-2 text-xs font-bold text-indigo-100">
-              <Zap size={14} />
-              Keep completing quests to level up
-            </div>
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-sky-300 to-white transition-all duration-700"
+              style={{
+                width: `${xpProgress}%`,
+              }}
+            />
 
           </div>
 
         </section>
 
 
-        {/* Current Phase */}
-        <section className="mb-5 overflow-hidden rounded-[2rem] border border-indigo-100 bg-white shadow-lg shadow-indigo-100/60">
+        {/* ==================================================
+            CURRENT PHASE
+        ================================================== */}
 
-          {/* Phase header */}
-          <div className="bg-gradient-to-r from-cyan-50 via-indigo-50 to-violet-50 p-5">
+        <section className="mb-6 overflow-hidden rounded-[2rem] border border-indigo-100 bg-white shadow-xl shadow-indigo-100/60">
+
+
+          {/* PHASE HEADER */}
+
+          <div className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-5 text-white">
 
             <div className="flex items-start justify-between">
 
               <div>
 
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-black text-indigo-600">
-                  <Target size={13} />
-                  CURRENT PHASE
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[10px] font-black uppercase tracking-wider backdrop-blur-sm">
+
+                  <Target size={12} />
+
+                  Current Phase
+
                 </div>
+
 
                 <h2 className="text-3xl font-black">
                   Phase {trading.phase.number}
                 </h2>
 
-                <p className="mt-1 font-bold text-indigo-500">
+
+                <p className="mt-1 font-bold text-indigo-200">
                   {trading.phase.name}
                 </p>
 
               </div>
 
-              <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 p-3 text-white shadow-lg shadow-indigo-200">
-                <Target size={22} />
-              </div>
 
-            </div>
-
-          </div>
-
-
-          <div className="p-5">
-
-            {/* Phase Aim */}
-            <div className="mb-5 rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 p-4">
-
-              <div className="mb-2 flex items-center gap-2">
-
-                <div className="rounded-lg bg-amber-100 p-1.5 text-amber-600">
-                  <Target size={14} />
-                </div>
-
-                <p className="text-xs font-black uppercase tracking-wide text-amber-600">
-                  Phase Aim
-                </p>
-
-              </div>
-
-              <p className="font-semibold leading-relaxed text-slate-700">
-                {trading.phase.aim}
-              </p>
-
+              <button
+                onClick={() => setActivePage("phaseHistory")}
+                className="rounded-2xl bg-white/15 p-3 backdrop-blur-sm  hover:bg-indigo-200 active:scale-95"
+              >
+                <Target size={23} />
+              </button>
             </div>
 
 
-            {/* Dates */}
-            <div className="mb-5 grid grid-cols-2 gap-3">
+            {/* PHASE PROGRESS */}
 
-              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+            <div className="mt-4">
 
-                <div className="mb-2 flex items-center gap-2 text-sky-500">
+              <div className="mb-2 flex justify-between text-[10px] font-black">
 
-                  <CalendarDays size={16} />
-
-                  <span className="text-xs font-black uppercase">
-                    Start
-                  </span>
-
-                </div>
-
-                <p className="font-black text-slate-800">
-                  {trading.phase.startDate}
-                </p>
-
-              </div>
-
-
-              <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4">
-
-                <div className="mb-2 flex items-center gap-2 text-rose-500">
-
-                  <Clock size={16} />
-
-                  <span className="text-xs font-black uppercase">
-                    Remaining
-                  </span>
-
-                </div>
-
-                <p className="font-black text-slate-800">
-                  {daysRemaining} days
-                </p>
-
-              </div>
-
-            </div>
-
-
-            {/* Phase Completion */}
-            <div>
-
-              <div className="mb-2 flex justify-between text-xs font-black">
-
-                <span className="text-slate-500">
+                <span className="text-indigo-200">
                   PHASE COMPLETION
                 </span>
 
-                <span className="text-indigo-600">
+                <span>
                   {phaseProgress}%
                 </span>
 
               </div>
 
-              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+
+              <div className="h-2 overflow-hidden rounded-full bg-black/20">
 
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-violet-600 transition-all duration-700"
+                  className="h-full rounded-full bg-white transition-all duration-700"
                   style={{
                     width: `${phaseProgress}%`,
                   }}
@@ -347,132 +291,498 @@ function Trading() {
 
           </div>
 
-        </section>
+
+          {/* PHASE DETAILS */}
+
+          <div className="p-5">
 
 
-        {/* Phase Quests */}
-        <section>
+            {/* ==================================================
+                PHASE AIM
+            ================================================== */}
 
-          <div className="mb-4 flex items-end justify-between">
+            <div className="mb-4 rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 p-4">
 
-            <div>
+              <div className="mb-2 flex items-center gap-2">
 
-              <div className="flex items-center gap-2">
+                <div className="rounded-lg bg-amber-100 p-1.5 text-amber-600">
 
-                <h2 className="text-xl font-black">
-                  Phase Quests
-                </h2>
+                  <Target size={14} />
 
-                <Sparkles
-                  size={17}
-                  className="text-amber-400"
-                />
+                </div>
+
+
+                <p className="text-xs font-black uppercase tracking-wide text-amber-600">
+                  Phase Aim
+                </p>
 
               </div>
 
-              <p className="mt-1 text-xs font-semibold text-slate-400">
-                Complete quests to increase your trading skill
+
+              <p className="font-semibold leading-relaxed text-slate-700">
+                {trading.phase.aim}
               </p>
 
             </div>
 
-            <div className="rounded-xl bg-indigo-100 px-3 py-2 text-sm font-black text-indigo-600">
-              {questList.filter((quest) => quest.done).length}
-              {" / "}
-              {questList.length}
+
+            {/* ==================================================
+                DATES
+            ================================================== */}
+
+            <div className="mb-5 grid grid-cols-2 gap-3">
+
+              {/* START */}
+
+              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-3.5">
+
+                <div className="mb-1 flex items-center gap-2 text-sky-500">
+
+                  <CalendarDays size={15} />
+
+                  <span className="text-[10px] font-black uppercase">
+                    Start
+                  </span>
+
+                </div>
+
+
+                <p className="text-sm font-black text-slate-800">
+                  {trading.phase.startDate}
+                </p>
+
+              </div>
+
+
+              {/* REMAINING */}
+
+              <div className="rounded-2xl border border-rose-100 bg-rose-50 p-3.5">
+
+                <div className="mb-1 flex items-center gap-2 text-rose-500">
+
+                  <Clock size={15} />
+
+                  <span className="text-[10px] font-black uppercase">
+                    Remaining
+                  </span>
+
+                </div>
+
+
+                <p className="text-sm font-black text-slate-800">
+                  {daysRemaining} days
+                </p>
+
+              </div>
+
             </div>
 
-          </div>
 
 
-          <div className="space-y-3">
+            {/* ==================================================
+                MONTHLY JOURNEY
+            ================================================== */}
 
-            {questList.map((quest) => (
+            <div>
 
-              <button
-                key={quest.id}
-                onClick={() => toggleQuest(quest.id)}
-                className={`group flex w-full items-center gap-3 rounded-2xl border p-4 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
-                  quest.done
-                    ? "border-emerald-100 bg-gradient-to-r from-emerald-50 to-cyan-50"
-                    : "border-slate-100 bg-white hover:border-indigo-100"
-                }`}
-              >
+              <div className="mb-3">
 
-                <div
-                  className={`rounded-full p-2.5 transition-all duration-300 ${
-                    quest.done
-                      ? "bg-gradient-to-br from-emerald-500 to-cyan-500 text-white shadow-md shadow-emerald-200"
-                      : "bg-indigo-50 text-indigo-500 group-hover:bg-indigo-100"
-                  }`}
-                >
+                <div className="flex items-center gap-2">
 
-                  {quest.done ? (
-                    <Check size={16} />
-                  ) : (
-                    <ChevronRight size={16} />
-                  )}
+                  <h3 className="text-xl font-black">
+                    Monthly Journey
+                  </h3>
 
-                </div>
-
-
-                <div className="flex-1">
-
-                  <p
-                    className={`font-bold transition-all duration-300 ${
-                      quest.done
-                        ? "text-slate-400 line-through"
-                        : "text-slate-800"
-                    }`}
-                  >
-                    {quest.title}
-                  </p>
-
-                  <div className="mt-1 flex items-center gap-1.5">
-
-                    <Zap
-                      size={12}
-                      className={
-                        quest.done
-                          ? "text-emerald-500"
-                          : "text-violet-500"
-                      }
-                    />
-
-                    <p
-                      className={`text-xs font-black ${
-                        quest.done
-                          ? "text-emerald-500"
-                          : "text-violet-500"
-                      }`}
-                    >
-                      +{quest.xp} XP
-                    </p>
-
-                  </div>
-
-                </div>
-
-
-                {!quest.done && (
-                  <ChevronRight
-                    size={18}
-                    className="text-slate-300 transition-transform duration-300 group-hover:translate-x-1 group-hover:text-indigo-400"
+                  <Sparkles
+                    size={16}
+                    className="text-amber-400"
                   />
+
+                </div>
+
+
+                <p className="mt-1 text-xs font-semibold text-slate-400">
+                  Complete each month to unlock the next
+                </p>
+
+              </div>
+
+
+              <div className="space-y-3">
+
+                {months.map(
+                  (month) => {
+
+                    const progress =
+                      calculateMonthProgress(
+                        month.missions
+                      );
+
+
+                    const monthXP =
+                      calculateMonthXP(
+                        month.missions
+                      );
+
+
+                    const completed =
+                      month.missions.filter(
+                        (mission) =>
+                          mission.done
+                      ).length;
+
+
+                    const isExpanded =
+                      expandedMonths[
+                      month.id
+                      ];
+
+
+                    return (
+                      <section
+                        key={month.id}
+                        className={`overflow-hidden rounded-2xl border transition-all duration-300 ${month.unlocked
+                            ? "border-indigo-100 bg-white"
+                            : "border-slate-200 bg-slate-100/80"
+                          }`}
+                      >
+
+
+                        {/* MONTH HEADER */}
+
+                        <button
+                          type="button"
+                          disabled={
+                            !month.unlocked
+                          }
+                          onClick={() =>
+                            toggleMonth(
+                              month.id
+                            )
+                          }
+                          className={`w-full text-left ${month.unlocked
+                              ? "cursor-pointer"
+                              : "cursor-not-allowed"
+                            }`}
+                        >
+
+                          <div
+                            className={`p-4 ${month.unlocked
+                                ? "bg-gradient-to-r from-indigo-50 via-white to-cyan-50"
+                                : "bg-slate-100"
+                              }`}
+                          >
+
+                            <div className="flex items-center justify-between">
+
+                              <div className="flex items-center gap-3">
+
+                                {/* MONTH ICON */}
+
+                                <div
+                                  className={`rounded-xl p-2.5 ${month.unlocked
+                                      ? "bg-gradient-to-br from-indigo-500 to-violet-600 text-white"
+                                      : "bg-slate-200 text-slate-400"
+                                    }`}
+                                >
+
+                                  {month.unlocked ? (
+                                    <CalendarDays
+                                      size={19}
+                                    />
+                                  ) : (
+                                    <Lock
+                                      size={19}
+                                    />
+                                  )}
+
+                                </div>
+
+
+                                {/* MONTH NAME */}
+
+                                <div>
+
+                                  <div className="flex items-center gap-2">
+
+                                    <h4 className="text-xl font-black">
+                                      {month.name}
+                                    </h4>
+
+
+                                    {month.unlocked && (
+                                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black uppercase text-emerald-600">
+                                        Unlocked
+                                      </span>
+                                    )}
+
+                                  </div>
+
+
+                                  <p className="text-[11px] font-bold text-slate-400">
+
+                                    {month.unlocked
+                                      ? `${completed} / ${month.missions.length} missions`
+                                      : "Complete previous month to unlock"}
+
+                                  </p>
+
+                                </div>
+
+                              </div>
+
+
+                              {/* PROGRESS */}
+
+                              <div className="flex items-center gap-2">
+
+                                <div className="text-right">
+
+                                  <p
+                                    className={`text-xl font-black ${month.unlocked
+                                        ? "text-indigo-600"
+                                        : "text-slate-400"
+                                      }`}
+                                  >
+                                    {progress}%
+                                  </p>
+
+
+                                  {month.unlocked && (
+                                    <p className="text-[9px] font-black text-violet-500">
+                                      +{monthXP} XP
+                                    </p>
+                                  )}
+
+                                </div>
+
+
+                                {month.unlocked && (
+                                  <ChevronDown
+                                    size={18}
+                                    className={`text-indigo-400 transition-transform duration-300 ${isExpanded
+                                        ? "rotate-180"
+                                        : ""
+                                      }`}
+                                  />
+                                )}
+
+                              </div>
+
+                            </div>
+
+
+                            {/* MONTH PROGRESS BAR */}
+
+                            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200">
+
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-violet-600 transition-all duration-700"
+                                style={{
+                                  width: `${progress}%`,
+                                }}
+                              />
+
+                            </div>
+
+                          </div>
+
+                        </button>
+
+
+                        {/* ==================================================
+                            MISSIONS
+                        ================================================== */}
+
+                        {month.unlocked &&
+                          isExpanded && (
+
+                            <div className="space-y-2 border-t border-indigo-50 p-3">
+
+                              {month.missions.map(
+                                (mission) => (
+
+                                  <button
+                                    key={mission.id}
+                                    onClick={() =>
+                                      toggleMission(
+                                        month.id,
+                                        mission.id
+                                      )
+                                    }
+                                    className={`group flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all duration-300 hover:shadow-md ${mission.done
+                                        ? "border-emerald-100 bg-gradient-to-r from-emerald-50 to-cyan-50"
+                                        : "border-slate-100 bg-slate-50 hover:border-indigo-100 hover:bg-white"
+                                      }`}
+                                  >
+
+                                    {/* STATUS */}
+
+                                    <div
+                                      className={`rounded-full p-2 ${mission.done
+                                          ? "bg-gradient-to-br from-emerald-500 to-cyan-500 text-white"
+                                          : "bg-white text-indigo-400 shadow-sm"
+                                        }`}
+                                    >
+
+                                      {mission.done ? (
+                                        <Check
+                                          size={15}
+                                        />
+                                      ) : (
+                                        <ChevronRight
+                                          size={15}
+                                        />
+                                      )}
+
+                                    </div>
+
+
+                                    {/* MISSION */}
+
+                                    <div className="flex-1">
+
+                                      {/* Mission title */}
+                                      <p
+                                        className={`text-sm font-bold ${mission.done
+                                          ? "text-slate-400 line-through"
+                                          : "text-slate-800"
+                                          }`}
+                                      >
+                                        {mission.title}
+                                      </p>
+
+
+
+
+
+                                      {/* Mission XP */}
+                                      <div className="mt-1 flex items-center gap-1">
+
+                                        <Zap
+                                          size={11}
+                                          className={
+                                            mission.done
+                                              ? "text-emerald-500"
+                                              : "text-violet-500"
+                                          }
+                                        />
+
+                                        <p
+                                          className={`text-[11px] font-black ${mission.done
+                                            ? "text-emerald-500"
+                                            : "text-violet-500"
+                                            }`}
+                                        >
+                                          +{mission.xp} XP
+                                        </p>
+
+                                      </div>
+
+                                    </div>
+
+
+                                    {!mission.done && (
+                                      <ChevronRight
+                                        size={16}
+                                        className="text-slate-300 transition-transform group-hover:translate-x-1"
+                                      />
+                                    )}
+
+                                  </button>
+
+                                )
+                              )}
+
+                            </div>
+
+                          )}
+
+                      </section>
+                    );
+
+                  }
                 )}
 
-              </button>
+              </div>
 
-            ))}
+            </div>
 
           </div>
 
         </section>
 
+
+
+        {/* ==================================================
+            NEXT PHASE
+        ================================================== */}
+
+        <section className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-100 shadow-sm">
+
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-white to-slate-100 opacity-70" />
+
+
+          <div className="relative p-6">
+
+            <div className="flex items-center gap-4">
+
+              <div className="rounded-2xl bg-slate-200 p-3.5 text-slate-400">
+
+                <Lock size={25} />
+
+              </div>
+
+
+              <div className="flex-1">
+
+                <div className="mb-1 flex items-center gap-2">
+
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Next Phase
+                  </span>
+
+
+                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[9px] font-black uppercase text-slate-400">
+                    Locked
+                  </span>
+
+                </div>
+
+
+                <h2 className="text-2xl font-black text-slate-400">
+                  Phase {trading.phase.number + 1}
+                </h2>
+
+
+                <p className="mt-1 text-sm font-semibold text-slate-400">
+                  Complete Phase {trading.phase.number} to unlock
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div className="mt-5 rounded-xl border border-slate-200 bg-white/70 p-3 text-center">
+
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                Journey continues
+              </p>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
       </main>
+
     </div>
   );
+
 }
 
-export default Trading;
 
+export default Trading;
