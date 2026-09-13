@@ -14,8 +14,8 @@
 // ========================================================= 
 
 const gymProgram = {
-  monday: {
-    name: "Monday",
+  wednesday: {
+    name: "Wednesday",
     exercises: [
       {
         id: "chest-press",
@@ -45,11 +45,18 @@ const gymProgram = {
         defaultSets: 3,
         defaultReps: 10,
       },
+      {
+        id: "face-pull",
+        name: "Rope Face Pull",
+        defaultWeight: 1,
+        defaultSets: 3,
+        defaultReps: 10,
+      },
     ],
   },
 
-  tuesday: {
-    name: "Tuesday",
+  thursday: {
+    name: "Thursday",
     exercises: [
       {
         id: "lat-pulldown",
@@ -79,11 +86,18 @@ const gymProgram = {
         defaultSets: 3,
         defaultReps: 10,
       },
+      {
+        id: "hyperextension",
+        name: "HyperExtension",
+        defaultWeight: 1,
+        defaultSets: 3,
+        defaultReps: 10,
+      },
     ],
   },
 
-  wednesday: {
-    name: "Wednesday",
+  tuesday: {
+    name: "Tuesday",
     exercises: [
       {
         id: "leg-press",
@@ -123,8 +137,8 @@ const gymProgram = {
     ],
   },
 
-  thursday: {
-    name: "Thursday",
+  saturday: {
+    name: "Saturday",
     exercises: [
       {
         id: "dumbell-press",
@@ -134,8 +148,8 @@ const gymProgram = {
         defaultReps: 10,
       },
       {
-        id: "assisted-pullup",
-        name: "Assisted Pull Up",
+        id: "close-grip-lat-pulldown",
+        name: "Close Grip Lat Pulldown",
         defaultWeight: 1,
         defaultSets: 3,
         defaultReps: 10,
@@ -186,6 +200,13 @@ const gymProgram = {
         id: "calf-raise",
         name: "Calf Raise",
         defaultWeight: 30,
+        defaultSets: 3,
+        defaultReps: 10,
+      },
+      {
+        id: "db-lunges",
+        name: "Dumbbell Lunges",
+        defaultWeight: 1,
         defaultSets: 3,
         defaultReps: 10,
       },
