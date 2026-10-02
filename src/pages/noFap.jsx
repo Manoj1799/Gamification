@@ -44,6 +44,9 @@ export default function NoFap() {
     // Loading state.
     const [isLoading, setIsLoading] = useState(true);
 
+    // popup after yes faped 
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+
     // Saving state.
     const [isSaving, setIsSaving] = useState(false);
 
@@ -259,7 +262,7 @@ export default function NoFap() {
                             </h1>
 
                             <p className="text-sm text-gray-400">
-                                One decision. No editing.
+                            Remember power cuts, forced early mornings, bus crowds, and they don't have to face this all. 
                             </p>
                         </div>
                     </div>
@@ -453,17 +456,18 @@ export default function NoFap() {
                     </h2>
 
                     {/* ==============================
-                        ANSWER BUTTONS
-                    =============================== */}
+                    ANSWER BUTTONS
+                =============================== */}
 
-                    {!todayRecord ? (
+                {!todayRecord ? (
+                    <>
                         <div className="mt-6 grid grid-cols-2 gap-3">
 
                             {/* YES */}
                             <button
                                 type="button"
                                 disabled={isSaving}
-                                onClick={() => handleAnswer(true)}
+                                onClick={() => setShowConfirmModal(true)}
                                 className="rounded-2xl bg-black px-5 py-4 text-lg font-bold text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 YES
@@ -480,9 +484,49 @@ export default function NoFap() {
                             </button>
 
                         </div>
-                    ) : (
-                        <div className="mt-6 rounded-2xl bg-gray-100 p-5">
 
+                        {showConfirmModal && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                                <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-xl">
+                                    <h3 className="text-xl font-bold text-black">Are you sure?</h3>
+                                    <p className="mt-2 text-sm text-neutral-600">
+                                        Do you have Active Shield ?.
+                                    </p>
+
+                                    <div className="mt-6 grid grid-cols-2 gap-3">
+                                        {/*  YES */}
+                                        <button
+                                            type="button"
+                                            disabled={isSaving}
+                                            onClick={() => {
+                                                setShowConfirmModal(false);
+                                                handleAnswer(false);
+                                            }}
+                                            className="rounded-2xl bg-black px-4 py-3 font-bold text-white transition active:scale-95 disabled:opacity-50"
+                                        >
+                                            YES
+                                        </button>
+
+                                        {/*  / NO */}
+                                        <button
+                                            type="button"
+                                            disabled={isSaving}
+                                                onClick={() => {
+                                                    setShowConfirmModal(false);
+                                                    handleAnswer(true);
+
+                                                }}
+                                            className="rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition active:scale-95 disabled:opacity-50"
+                                        >
+                                            NO
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                            <div className="mt-6 rounded-2xl bg-gray-100 p-5">
                             {/* Recorded status */}
                             <div className="flex items-center gap-2">
                                 <Lock size={18} />
@@ -524,9 +568,7 @@ export default function NoFap() {
 
                             {todayRecord.didFap && (
                                 <p className="mt-4 text-sm font-medium text-gray-700">
-                                    You hate them, but your relapse still
-                                    costs you. Turn the pain into a donation
-                                    that hits where it hurts.
+                                    You fucked up ?? Now donate and feel the pain of time loss.
                                 </p>
                             )}
 

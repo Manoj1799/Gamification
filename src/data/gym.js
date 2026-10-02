@@ -48,7 +48,7 @@ const gymProgram = {
       {
         id: "face-pull",
         name: "Rope Face Pull",
-        defaultWeight: 1,
+        defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
       },
@@ -89,7 +89,7 @@ const gymProgram = {
       {
         id: "hyperextension",
         name: "HyperExtension",
-        defaultWeight: 1,
+        defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
       },
@@ -130,7 +130,7 @@ const gymProgram = {
       {
         id: "abs-crunch",
         name: "Decline Abs Bench Crunch",
-        defaultWeight: 1,
+        defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
       },
@@ -150,7 +150,7 @@ const gymProgram = {
       {
         id: "close-grip-lat-pulldown",
         name: "Close Grip Lat Pulldown",
-        defaultWeight: 1,
+        defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
       },
@@ -184,7 +184,7 @@ const gymProgram = {
       {
         id: "leg-press2",
         name: "Leg Press (High and Wide Foot Placement)",
-        defaultWeight: 1,
+        defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
       },
@@ -192,7 +192,7 @@ const gymProgram = {
       {
         id: "romanian-deadlift2",
         name: "Romanian Deadlift (Dumbells)",
-        defaultWeight: 1,
+        defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
       },
@@ -206,14 +206,14 @@ const gymProgram = {
       {
         id: "db-lunges",
         name: "Dumbbell Lunges",
-        defaultWeight: 1,
+        defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
       },
       {
         id: "abs-crunch",
         name: "Decline Abs Bench Crunch",
-        defaultWeight: 1,
+        defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
       },

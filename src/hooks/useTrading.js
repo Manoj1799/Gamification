@@ -6,6 +6,8 @@ import {
   trading,
   tradingLevels,
   tradingMissionTemplates,
+  currentPhaseStartYear,
+  CurrentPhaseStartMonth
 } from "../data/trading";
 
 import {
@@ -82,20 +84,39 @@ export function useTrading() {
 
         const record =
           await loadTradingRecord();
+      
 
 
-        const savedMonths =
+        let savedMonths =
           record?.months ?? trading.months;
+        
+          // 2. Check if the last mission of the last month is completed
+        const lastMonth = savedMonths[savedMonths.length - 1];
+        const lastMission = lastMonth?.missions?.[lastMonth.missions.length - 1];
+        const isLastMissionDone = Boolean(lastMission?.done);
+
+        if (isLastMissionDone) {
+          // Compare the recorded phase number against the default phase number
+          const recordedPhaseNumber = record?.phaseNumber;
+          const defaultPhaseNumber = trading.phase.number;
+        
+          if (recordedPhaseNumber !== defaultPhaseNumber) {
+            savedMonths = trading.months;
+          }
+        }
 
 
         const generatedMonths =
           savedMonths.map(
             (month, index) => {
+              const absoluteMonth = CurrentPhaseStartMonth + index;
+              const currentYear = currentPhaseStartYear + Math.floor(absoluteMonth / 12);
+              const currentMonth = absoluteMonth % 12; // Always stays within 0 to 11
 
               const generatedMissions =
                 generateMonthlyMissions(
-                  2010,
-                  5 + index,
+                  currentYear,
+                  currentMonth,
                   tradingMissionTemplates
                 );
 

@@ -1,6 +1,8 @@
 /* =========================================================
    TRADING LEVEL SYSTEM
 ========================================================= */
+export const currentPhaseStartYear = 2010;
+export const CurrentPhaseStartMonth = 9; // Sep (0 Based)
 
 export const tradingLevels = [
   {
@@ -194,6 +196,7 @@ export const tradingMissionTemplates = {
       "The Final Stretch: Complete the third week.",
     xp: 7,
   },
+  
 
 
   /* -------------------------
@@ -214,20 +217,19 @@ export const tradingMissionTemplates = {
    Previous completed phases will appear here.
 ========================================================= */
 
-export const completedPhases = [];
+
+export const completedPhases = [
+  {
+    number: 1,
+    name: "Foundation/Data Collection",
+    aim: "Build the foundation.",
+    startDate: "7 Sep 2026",
+    completedDate: "25 Sep 2026",
+    experience_collected: "Jun 2010 to Sep 2010"
+  },
+];
 
 
-/*
-Example for later:
-
-{
-  number: 0,
-  name: "Foundation",
-  aim: "Build the foundation.",
-  startDate: "2026-07-01",
-  completedDate: "2026-08-30",
-}
-*/
 
 
 /* =========================================================
@@ -251,16 +253,12 @@ export const trading = {
   ------------------------- */
 
   phase: {
-    number: 1,
-    name: "Data Collection",
-
-    aim: "Build database and skeleton before backtesting.",
-
-    startDate: "2026-09-07",
-    endDate: "2026-09-22",
+    number: 2,
+    name: "BackTesting",
+    aim: "1. Complete 100 Trades.\n2. Complete 500 Trades.",
+    startDate: "2026-10-03",
+    endDate: "2026-11-08",
   },
-
-
   /* -------------------------
      MONTHS
      -------------------------------------------------------
@@ -276,31 +274,305 @@ export const trading = {
 
   months: [
     {
-      id: "june",
-      name: "June",
+      id: "oct_10",
+      name: "October 2010",
       unlocked: true,
       missions: [],
     },
-
+     {
+      id: "nov_10",
+      name: "November 2010",
+      unlocked: false,
+      missions: [],
+    },
     {
-      id: "july",
-      name: "July",
+      id: "dec_10",
+      name: "December 2010",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "jan_11",
+      name: "January 2011",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "feb_11",
+      name: "February 2011",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "mar_11",
+      name: "March 2011",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "apr_11",
+      name: "April 2011",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "may_11",
+      name: "May 2011",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "jun_11",
+      name: "June 2011",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "jul_11",
+      name: "July 2011",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "aug_11",
+      name: "August 2011",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "sep_11",
+      name: "September 2011",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "oct_11",
+      name: "October 2011",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "nov_11",
+      name: "November 2011",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "dec_11",
+      name: "December 2011",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "jan_12",
+      name: "January 2012",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "feb_12",
+      name: "February 2012",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "mar_12",
+      name: "March 2012",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "apr_12",
+      name: "April 2012",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "may_12",
+      name: "May 2012",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "jun_12",
+      name: "June 2012",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "jul_12",
+      name: "July 2012",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "aug_12",
+      name: "August 2012",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "sep_12",
+      name: "September 2012",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "oct_12",
+      name: "October 2012",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "nov_12",
+      name: "November 2012",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "dec_12",
+      name: "December 2012",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "jan_13",
+      name: "January 2013",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "feb_13",
+      name: "February 2013",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "mar_13",
+      name: "March 2013",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "apr_13",
+      name: "April 2013",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "may_13",
+      name: "May 2013",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "jun_13",
+      name: "June 2013",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "jul_13",
+      name: "July 2013",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "aug_13",
+      name: "August 2013",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "sep_13",
+      name: "September 2013",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "oct_13",
+      name: "October 2013",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "nov_13",
+      name: "November 2013",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "dec_13",
+      name: "December 2013",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "jan_14",
+      name: "January 2014",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "feb_14",
+      name: "February 2014",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "mar_14",
+      name: "March 2014",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "apr_14",
+      name: "April 2014",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "may_14",
+      name: "May 2014",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "jun_14",
+      name: "June 2014",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "jul_14",
+      name: "July 2014",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "aug_14",
+      name: "August 2014",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "sep_14",
+      name: "September 2014",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "oct_14",
+      name: "October 2014",
+      unlocked: false,
+      missions: [],
+    },
+    {
+      id: "nov_14",
+      name: "November 2014",
       unlocked: false,
       missions: [],
     },
 
-    {
-      id: "august",
-      name: "August",
-      unlocked: false,
-      missions: [],
-    },
-
-    {
-      id: "september",
-      name: "September",
-      unlocked: false,
-      missions: [],
-    },
   ],
 };

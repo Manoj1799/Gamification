@@ -2,18 +2,18 @@ import {
     getTradingRecord,
     saveTradingRecord,
 } from "../data/database";
-
+import {
+    currentPhaseStartYear,
+    CurrentPhaseStartMonth
+} from "../data/trading";
 import {
     calculateAvailableDates,
+    getAutoCompletedDatesUpToPhase,
 } from "../logic/journeyMap";
-
 
 // ================================
 // LOAD JOURNEY DATA
 // ================================
-
-// Loads Trading missions for the selected month
-// and converts completed missions into Journey-available dates.
 
 export async function loadJourneyData(
     year,
@@ -29,12 +29,9 @@ export async function loadJourneyData(
         };
     }
 
-    // Trading starts at June 2010.
-    // Convert the selected calendar month into
-    // the corresponding Trading month index.
     const monthIndex =
-        (year - 2010) * 12 +
-        (month - 5);
+        (year - currentPhaseStartYear) * 12 +
+        (month - CurrentPhaseStartMonth);
 
     const tradingMonth =
         tradingRecord.months?.[monthIndex];
@@ -42,8 +39,6 @@ export async function loadJourneyData(
     const missions =
         tradingMonth?.missions ?? [];
 
-    // Only completed Trading missions
-    // unlock their corresponding Journey dates.
     const availableDates =
         calculateAvailableDates(
             year,
@@ -51,15 +46,35 @@ export async function loadJourneyData(
             missions
         );
 
-    const completedDates =
+    // Existing completed dates from store
+    const storedCompletedDates =
         tradingRecord.journey?.completedDates ?? [];
+
+    // All trading dates from June 2010 up to current phase month
+    const pastCompletedDates =
+        getAutoCompletedDatesUpToPhase();
+
+    // Deduplicate merged dates
+    const mergedCompletedDates = Array.from(
+        new Set([...storedCompletedDates, ...pastCompletedDates])
+    );
+
+    // Persist if any past dates were newly auto-completed
+    if (mergedCompletedDates.length !== storedCompletedDates.length) {
+        await saveTradingRecord({
+            ...tradingRecord,
+            journey: {
+                ...(tradingRecord.journey ?? {}),
+                completedDates: mergedCompletedDates,
+            },
+        });
+    }
 
     return {
         availableDates,
-        completedDates,
+        completedDates: mergedCompletedDates,
     };
 }
-
 
 // ================================
 // SAVE COMPLETED JOURNEY DAY
@@ -91,7 +106,6 @@ export async function completeJourneyDate(
 
     await saveTradingRecord({
         ...tradingRecord,
-
         journey: {
             ...(tradingRecord.journey ?? {}),
             completedDates:
@@ -102,7 +116,6 @@ export async function completeJourneyDate(
     return updatedCompletedDates;
 }
 
-
 // ================================
 // LOAD ONLY COMPLETED DATES
 // ================================
@@ -111,7 +124,13 @@ export async function loadCompletedJourneyDates() {
     const tradingRecord =
         await getTradingRecord();
 
-    return (
-        tradingRecord?.journey?.completedDates ?? []
+    const storedCompletedDates =
+        tradingRecord?.journey?.completedDates ?? [];
+
+    const pastCompletedDates =
+        getAutoCompletedDatesUpToPhase();
+
+    return Array.from(
+        new Set([...storedCompletedDates, ...pastCompletedDates])
     );
 }

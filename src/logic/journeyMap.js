@@ -1,4 +1,8 @@
 // Generates calendar structure and controls Journey unlock/completion rules.
+import {
+    currentPhaseStartYear,
+    CurrentPhaseStartMonth
+} from "../data/trading";
 
 export const START_YEAR = 2010;
 export const START_MONTH = 5; // June (0-based)
@@ -29,7 +33,6 @@ export const WEEKDAYS = [
     "Sat",
 ];
 
-
 /* =========================================================
    BASIC DATE HELPERS
 ========================================================= */
@@ -49,7 +52,6 @@ export function getDaysInMonth(year, month) {
 export function getFirstDayOfMonth(year, month) {
     return new Date(year, month, 1).getDay();
 }
-
 
 /* =========================================================
    CALENDAR GENERATION
@@ -102,7 +104,6 @@ export function generateMonthDays(year, month) {
     return days;
 }
 
-
 /* =========================================================
    DATE STATE
 ========================================================= */
@@ -120,7 +121,6 @@ export function isAvailableDate(
 ) {
     return availableDates.includes(dateKey);
 }
-
 
 /* =========================================================
    TRADING DAY HELPERS
@@ -141,7 +141,6 @@ export function isTradingDay(
 
     return weekday !== 0 && weekday !== 6;
 }
-
 
 // Return all trading dates in a month.
 export function getTradingDates(
@@ -180,6 +179,32 @@ export function getTradingDates(
     return dates;
 }
 
+/* =========================================================
+   AUTO-COMPLETE PAST MONTHS
+========================================================= */
+
+// Collects all trading days from June 2010 up through the month
+// immediately preceding the active phase start (e.g. up through September).
+export function getAutoCompletedDatesUpToPhase() {
+    const dates = [];
+
+    let curYear = START_YEAR;
+    let curMonth = START_MONTH;
+
+    while (
+        curYear < currentPhaseStartYear ||
+        (curYear === currentPhaseStartYear && curMonth < CurrentPhaseStartMonth)
+    ) {
+        const monthTradingDays = getTradingDates(curYear, curMonth);
+        dates.push(...monthTradingDays);
+
+        const next = getNextMonth(curYear, curMonth);
+        curYear = next.year;
+        curMonth = next.month;
+    }
+
+    return dates;
+}
 
 /* =========================================================
    TRADING WEEK HELPERS
@@ -203,7 +228,6 @@ export function getTradingWeeks(
 
     tradingDates.forEach(
         (dateKey) => {
-
             const day =
                 Number(
                     dateKey.slice(-2)
@@ -246,31 +270,9 @@ export function getTradingWeeks(
     return weeks;
 }
 
-
 /* =========================================================
    MISSION DATE LOGIC
 ========================================================= */
-
-/*
-   Journey does not store dates inside missions.
-
-   Trading missions provide:
-
-   mission.type
-   mission.week
-
-   Journey calculates the dates from those values.
-
-   Supported types:
-
-   monTue
-   wedThu
-   friday
-   firstWeek
-   secondWeek
-   thirdWeek
-   lastTradingDay
-*/
 
 export function getMissionDates(
     year,
@@ -300,20 +302,14 @@ export function getMissionDates(
 
     const week =
         tradingWeeks[
-        weekNumber - 1
+            weekNumber - 1
         ] || [];
-
-
-    /* -------------------------
-       MONDAY + TUESDAY
-    ------------------------- */
 
     if (
         mission.type === "mon-tue"
     ) {
         return week.filter(
             (dateKey) => {
-
                 const day =
                     Number(
                         dateKey.slice(-2)
@@ -334,17 +330,11 @@ export function getMissionDates(
         );
     }
 
-
-    /* -------------------------
-       WEDNESDAY + THURSDAY
-    ------------------------- */
-
     if (
         mission.type === "wed-thu"
     ) {
         return week.filter(
             (dateKey) => {
-
                 const day =
                     Number(
                         dateKey.slice(-2)
@@ -365,17 +355,11 @@ export function getMissionDates(
         );
     }
 
-
-    /* -------------------------
-       FRIDAY
-    ------------------------- */
-
     if (
         mission.type === "friday"
     ) {
         return week.filter(
             (dateKey) => {
-
                 const day =
                     Number(
                         dateKey.slice(-2)
@@ -393,21 +377,11 @@ export function getMissionDates(
         );
     }
 
-
-    /* -------------------------
-       COMPLETE FIRST WEEK
-    ------------------------- */
-
     if (
         mission.type === "first-week"
     ) {
         return tradingWeeks[0] || [];
     }
-
-
-    /* -------------------------
-       COMPLETE SECOND WEEK
-    ------------------------- */
 
     if (
         mission.type === "second-week"
@@ -415,21 +389,11 @@ export function getMissionDates(
         return tradingWeeks[1] || [];
     }
 
-
-    /* -------------------------
-       COMPLETE THIRD WEEK
-    ------------------------- */
-
     if (
         mission.type === "third-week"
     ) {
         return tradingWeeks[2] || [];
     }
-
-
-    /* -------------------------
-       LAST TRADING DAY
-    ------------------------- */
 
     if (
         mission.type === "last-trading-day"
@@ -440,17 +404,9 @@ export function getMissionDates(
     return [];
 }
 
-
 /* =========================================================
    BUILD AVAILABLE JOURNEY DATES
 ========================================================= */
-
-/*
-   Completed Trading missions unlock
-   their calculated Journey dates.
-
-   No daily quests are involved.
-*/
 
 export function calculateAvailableDates(
     year,
@@ -462,8 +418,6 @@ export function calculateAvailableDates(
 
     missions.forEach(
         (mission) => {
-
-            // An unfinished mission does not unlock its dates.
             if (!mission.done) {
                 return;
             }
@@ -490,12 +444,10 @@ export function calculateAvailableDates(
     ).sort();
 }
 
-
 /* =========================================================
    COMPLETION
 ========================================================= */
-// A month is finished only when its final trading day
-// has been completed in Journey.
+
 export function isMonthComplete(
     year,
     month,
@@ -516,8 +468,7 @@ export function isMonthComplete(
         lastTradingDay
     );
 }
-// A year is finished only when the final trading day
-// of December has been completed.
+
 export function isYearComplete(
     year,
     availableDates,
@@ -532,14 +483,13 @@ export function isYearComplete(
 
     const lastTradingDay =
         decemberTradingDates[
-        decemberTradingDates.length - 1
+            decemberTradingDates.length - 1
         ];
 
     return completedDates.includes(
         lastTradingDay
     );
 }
-
 
 /* =========================================================
    YEAR / MONTH NAVIGATION UNLOCKS
@@ -550,7 +500,6 @@ export function isYearUnlocked(
     availableDates,
     completedDates
 ) {
-    // 2010 is the starting year.
     if (
         year === START_YEAR
     ) {
@@ -570,15 +519,14 @@ export function isMonthUnlocked(
     availableDates,
     completedDates
 ) {
-    // Months before June 2010 are crossed, not locked.
     if (
-        year === START_YEAR &&
-        month < START_MONTH
+        year < START_YEAR ||
+        (year === START_YEAR && month < START_MONTH)
     ) {
         return false;
     }
 
-    // June 2010 is the starting month.
+    // June 2010 is the starting month
     if (
         year === START_YEAR &&
         month === START_MONTH
@@ -586,7 +534,14 @@ export function isMonthUnlocked(
         return true;
     }
 
-    // Every later month depends on the previous month.
+    // Active phase month is always open
+    if (
+        year === currentPhaseStartYear &&
+        month === CurrentPhaseStartMonth
+    ) {
+        return true;
+    }
+
     const previousMonth =
         getPreviousMonth(
             year,
@@ -600,7 +555,6 @@ export function isMonthUnlocked(
         completedDates
     );
 }
-
 
 /* =========================================================
    PREVIOUS MONTH
@@ -622,7 +576,6 @@ export function getPreviousMonth(
         month: month - 1,
     };
 }
-
 
 /* =========================================================
    NEXT MONTH

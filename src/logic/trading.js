@@ -87,13 +87,9 @@ export function calculateDaysRemaining(endDate) {
   // Calculate the difference between the dates.
   const difference = end - today;
 
-  // Convert milliseconds into days and prevent negative values.
-  return Math.max(
-    0,
-    Math.ceil(
-      difference / (1000 * 60 * 60 * 24)
-    )
-  );
+  // Convert milliseconds into days (allows negative values).
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+  return Math.round(difference / MS_PER_DAY);
 }
 
 /* =========================================================
@@ -206,7 +202,7 @@ export function generateMonthlyMissions(
 
     missions.push({
       id:
-        `${ year } -${ String(month + 1).padStart(2, "0") } -mission - ${ missionNumber } `,
+        `${year} -${String(month + 1).padStart(2, "0")} -mission - ${missionNumber} `,
 
       title: template.title,
 
@@ -297,119 +293,101 @@ export function generateMonthlyMissions(
 
 
   /* ---------------------------------------------------------
-     5-WEEK MONTH
-  --------------------------------------------------------- */
+      WEEKS 4 & 5 HANDLING
+    --------------------------------------------------------- */
+  const lastTradingDay = tradingDays[tradingDays.length - 1];
 
-  if (weeks.length === 5) {
-    /*
-      After the first three weeks, do NOT create another
-      "Complete Week" mission.
+  if (weeks.length === 4) {
+    const week4Dates = weeks[3];
+    const dayCount = week4Dates.length
 
-      Instead, all remaining trading days are grouped into:
-
-        Mon-Tue
-        Wed-Thu
-        Friday
-        Last Trading Day
-    */
-
-    const remainingWeeks =
-      weeks.slice(3);
-
-    const remainingTradingDays =
-      remainingWeeks.flat();
-
-    // -----------------------------------------------
-    // MONDAY + TUESDAY
-    // -----------------------------------------------
-
-    const mondayTuesday =
-      remainingTradingDays.filter(
-        (day) =>
-          day.getDay() === 1 ||
-          day.getDay() === 2
+    if (dayCount >= 5) {
+      // 1. Mon - Tue for Week 4
+      const monTue = week4Dates.filter(
+        (day) => day.getDay() === 1 || day.getDay() === 2
       );
-
-    addMission(
-      missionTemplates.monTue,
-      4,
-      mondayTuesday
-    );
-
-
-    // -----------------------------------------------
-    // WEDNESDAY + THURSDAY
-    // -----------------------------------------------
-
-    const wedThursday =
-      remainingTradingDays.filter(
-        (day) =>
-          day.getDay() === 3 ||
-          day.getDay() === 4
+      addMission(missionTemplates.monTue, 4, monTue);
+    
+      // 2. Wed - Thu for Week 4
+      const wedThu = week4Dates.filter(
+        (day) => day.getDay() === 3 || day.getDay() === 4
       );
-
-    addMission(
-      missionTemplates.wedThu,
-      4,
-      wedThursday
-    );
-
-
-    // -----------------------------------------------
-    // FRIDAY
-    // -----------------------------------------------
-
-    const fridays =
-      remainingTradingDays.filter(
-        (day) =>
-          day.getDay() === 5
+      addMission(missionTemplates.wedThu, 4, wedThu);
+    
+      // 3. Last Trading Day
+      addMission(missionTemplates.lastTradingDay, 4, [lastTradingDay]);
+      
+    } else if (dayCount >= 3) {
+      // 1. Mon - Tue for Week 4
+      const monTue = week4Dates.filter(
+        (day) => day.getDay() === 1 || day.getDay() === 2
       );
-
-    addMission(
-      missionTemplates.friday,
-      4,
-      fridays
-    );
-
-
-    // -----------------------------------------------
-    // LAST TRADING DAY
-    // -----------------------------------------------
-
-    const lastTradingDay =
-      tradingDays[
-        tradingDays.length - 1
-      ];
-
-    addMission(
-      missionTemplates.lastTradingDay,
-      5,
-      [lastTradingDay]
-    );
+      addMission(missionTemplates.monTue, 4, monTue);
+      // 3. Last Trading Day
+      addMission(missionTemplates.lastTradingDay, 4, [lastTradingDay]);
+    } else {
+      // 3. Last Trading Day
+      addMission(missionTemplates.lastTradingDay, 4, [lastTradingDay]);
+    }
 
   } else {
-    /* -------------------------------------------------------
-       NORMAL MONTH
-       -------------------------------------------------------
 
-       For months with fewer than 5 trading weeks, finish
-       with the final trading day mission.
-    */
+    // ==========================================
+    // WEEK 5: Dynamic based on month end
+    // ==========================================
+    const week5Dates = weeks[4];
+    const dayCount2 = week5Dates.length
+    const week4Dates = weeks[3];
 
-    const lastTradingDay =
-      tradingDays[
-        tradingDays.length - 1
-      ];
+      // 1. Mon - Tue for Week 4
+      const monTue = week4Dates.filter(
+        (day) => day.getDay() === 1 || day.getDay() === 2
+      );
+      addMission(missionTemplates.monTue, 4, monTue);
+    
+      // 2. Wed - Thu for Week 4
+      const wedThu = week4Dates.filter(
+        (day) => day.getDay() === 3 || day.getDay() === 4
+      );
+      addMission(missionTemplates.wedThu, 4, wedThu);
+    
+      const fri = week4Dates.filter(
+        (day) => day.getDay() === 5 
+      );
+      addMission(missionTemplates.friday, 4, fri);
 
-    addMission(
-      missionTemplates.lastTradingDay,
-      weeks.length,
-      [lastTradingDay]
-    );
+    if (dayCount2 >= 5) {
+      // 1. Mon - Tue for Week 5
+      const monTue = week5Dates.filter(
+        (day) => day.getDay() === 1 || day.getDay() === 2
+      );
+      addMission(missionTemplates.monTue, 5, monTue);
+  
+      // 2. Wed - Thu for Week 5
+      const wedThu = week5Dates.filter(
+        (day) => day.getDay() === 3 || day.getDay() === 4
+      );
+      addMission(missionTemplates.wedThu, 5, wedThu);
+  
+      // 3. Last Trading Day
+      addMission(missionTemplates.lastTradingDay, 5, [lastTradingDay]);
+    
+    } else if (dayCount2 >= 3) {
+      // 1. Mon - Tue for Week 4
+      const monTue = week5Dates.filter(
+        (day) => day.getDay() === 1 || day.getDay() === 2
+      );
+      addMission(missionTemplates.monTue, 5, monTue);
+      // 3. Last Trading Day
+      addMission(missionTemplates.lastTradingDay, 5, [lastTradingDay]);
+    } else {
+      // 3. Last Trading Day
+      addMission(missionTemplates.lastTradingDay, 5, [lastTradingDay]);
+    }
   }
 
-
-  return missions;
+    return missions;
+  
 }
 
 /* =========================================================

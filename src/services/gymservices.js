@@ -14,7 +14,6 @@ import gymProgram from "../data/gym";
 
 // Get today's Gym program key.
 export function getTodayKey() {
-
     // JavaScript uses Sunday = 0 through Saturday = 6.
     const days = [
         "sunday",
@@ -39,88 +38,50 @@ export function getDayProgram(day) {
 
 // Get all exercises configured for a specific day.
 export function getExercisesForDay(day) {
-
-    // Get the program for the requested day.
-    const dayProgram =
-        getDayProgram(day);
-
-    // Return its exercises or an empty array.
+    const dayProgram = getDayProgram(day);
     return dayProgram?.exercises || [];
 }
 
 
 // Get the default values for one exercise.
-export function getExerciseDefaults(
-    day,
-    exerciseId
-) {
+export function getExerciseDefaults(day, exerciseId) {
+    const allDayPrograms = Object.values(gymProgram);
 
-    // Search every configured Gym day.
-    //
-    // This makes the exercise ID the true identity
-    // of the exercise, regardless of which day it appears on.
-    //
-    // Example:
-    // "lateral-raise" on Monday
-    // "lateral-raise" on Thursday
-    // are treated as the same exercise.
-    //
-    // Different IDs remain different exercises.
-    const allDayPrograms =
-        Object.values(gymProgram);
-
-    // Start with no matching exercise.
     let exercise = null;
 
-    // Search through every day's program.
-    for (
-        const dayProgram
-        of allDayPrograms
-    ) {
+    for (const dayProgram of allDayPrograms) {
+        const exercises = dayProgram?.exercises || [];
 
-        // Get this day's exercises safely.
-        const exercises =
-            dayProgram?.exercises || [];
+        exercise = exercises.find((item) => item.id === exerciseId);
 
-        // Find the requested exercise ID.
-        exercise = exercises.find(
-            (item) =>
-                item.id === exerciseId
-        );
-
-        // Stop searching once found.
         if (exercise) {
             break;
         }
     }
 
-    // Return null if the exercise does not exist.
     if (!exercise) {
         return null;
     }
 
-    // Determine the default number of sets.
-    const sets =
-        Number(exercise.defaultSets) || 1;
+    const sets = Number(exercise.defaultSets) || 1;
 
-    // Create one default rep value for every set.
+    // Create default rep values for every set.
     const reps = Array.from(
         { length: sets },
-        () =>
-            Number(
-                exercise.defaultReps
-            ) || 10
+        () => Number(exercise.defaultReps) || 10
     );
 
-    // Return the exercise defaults.
+    // Create default weight values for every set.
+    const defaultWeightValue = Number(exercise.defaultWeight) || 0;
+    const weights = Array.from(
+        { length: sets },
+        () => defaultWeightValue
+    );
+
     return {
-        weight:
-            Number(
-                exercise.defaultWeight
-            ) || 0,
-
+        weight: defaultWeightValue,
+        weights,
         sets,
-
         reps,
     };
 }
@@ -130,20 +91,14 @@ export function getExerciseDefaults(
 // REP / VOLUME LOGIC
 // =========================================================
 
-
 // Calculate the total number of repetitions.
 export function calculateTotalReps(reps) {
-
-    // Reps must always be an array.
-    // Returning zero prevents reduce() from crashing.
     if (!Array.isArray(reps)) {
         return 0;
     }
 
-    // Add all individual set repetitions together.
     return reps.reduce(
-        (total, rep) =>
-            total + (Number(rep) || 0),
+        (total, rep) => total + (Number(rep) || 0),
         0
     );
 }
@@ -151,31 +106,34 @@ export function calculateTotalReps(reps) {
 
 // Calculate workout volume.
 //
-// Example:
+// Supports:
+// 1. Array of weights per set: weights = [40, 42.5, 45], reps = [10, 10, 8]
+//    volume = (40 * 10) + (42.5 * 10) + (45 * 8) = 1185
 //
-// weight = 40
-// reps = [10, 10, 8]
-//
-// volume = 40 × (10 + 10 + 8)
-//        = 1120
-export function calculateVolume(
-    weight,
-    sets,
-    reps
-) {
+// 2. Legacy single numeric weight: weight = 40, reps = [10, 10, 8]
+//    volume = 40 * (10 + 10 + 8) = 1120
+export function calculateVolume(weight, sets, reps) {
+    if (!Array.isArray(reps)) {
+        return 0;
+    }
 
-    // Volume is weight multiplied by total reps.
-    return (
-        (Number(weight) || 0) *
-        calculateTotalReps(reps)
-    );
+    // Per-set array calculation
+    if (Array.isArray(weight)) {
+        return reps.reduce((total, rep, index) => {
+            const setWeight = Number(weight[index]) || 0;
+            const setRep = Number(rep) || 0;
+            return total + setWeight * setRep;
+        }, 0);
+    }
+
+    // Legacy fallback (single weight multiplied by sum of reps)
+    return (Number(weight) || 0) * calculateTotalReps(reps);
 }
 
 
 // =========================================================
 // SESSION LOGIC
 // =========================================================
-
 
 // Save one completed exercise session.
 export async function saveExerciseSession({
@@ -184,81 +142,67 @@ export async function saveExerciseSession({
     exerciseId,
     exerciseName,
     weight,
+    weights,
     sets,
     reps,
     form,
+    volume: explicitVolume,
 }) {
-
     // Make sure Sets is always a valid number.
-    const safeSets =
-        Number(sets) || 1;
+    const safeSets = Number(sets) || 1;
 
-    // Make sure reps is always an array.
-    const safeReps =
-        Array.isArray(reps)
-            ? reps
-                .slice(0, safeSets)
-                .map(
-                    (rep) =>
-                        Math.max(
-                            1,
-                            Number(rep) || 1
-                        )
-                )
-            : Array.from(
-                {
-                    length: safeSets,
-                },
-                () => 10
-            );
+    // Make sure reps is always an array matching safeSets.
+    const safeReps = Array.isArray(reps)
+        ? reps.slice(0, safeSets).map((rep) => Math.max(1, Number(rep) || 1))
+        : Array.from({ length: safeSets }, () => 10);
 
-    // Make sure there is one rep value
-    // for every set.
-    while (
-        safeReps.length <
-        safeSets
-    ) {
-
-        // Use the previous set's reps when possible.
+    while (safeReps.length < safeSets) {
         safeReps.push(
-            safeReps.length > 0
-                ? safeReps[
-                safeReps.length - 1
-                ]
-                : 10
+            safeReps.length > 0 ? safeReps[safeReps.length - 1] : 10
         );
     }
 
-    // Calculate and permanently store the volume.
-    const volume =
-        calculateVolume(
-            weight,
-            safeSets,
-            safeReps
+    // Handle per-set weights safely.
+    const rawWeights = Array.isArray(weights)
+        ? weights
+        : Array.isArray(weight)
+        ? weight
+        : Array.from({ length: safeSets }, () => Number(weight) || 0);
+
+    const safeWeights = rawWeights
+        .slice(0, safeSets)
+        .map((w) => Math.max(0, Number(w) || 0));
+
+    while (safeWeights.length < safeSets) {
+        safeWeights.push(
+            safeWeights.length > 0 ? safeWeights[safeWeights.length - 1] : 0
         );
+    }
 
-    // Every saved workout gets its own permanent ID.
-    const id =
-        `${exerciseId}-${Date.now()}`;
+    // Calculate volume across all sets if not explicitly provided.
+    const volume =
+        explicitVolume !== undefined
+            ? explicitVolume
+            : calculateVolume(safeWeights, safeSets, safeReps);
 
-    // Create the complete session record.
+    const id = `${exerciseId}-${Date.now()}`;
+
     const session = {
         id,
         date,
         day,
         exerciseId,
         exerciseName,
-        weight,
+        weight: safeWeights[0] ?? 0, // Legacy fallback
+        weights: safeWeights,
         sets: safeSets,
         reps: safeReps,
         form,
         volume,
     };
 
-    // Store the session permanently in IndexedDB.
     await saveGymRecord(session);
 
-    // Return the saved session.
     return session;
 }
 
@@ -267,40 +211,19 @@ export async function saveExerciseSession({
 // HISTORY LOGIC
 // =========================================================
 
-
 // Load every Gym session.
 export async function loadAllGymSessions() {
+    const sessions = await getAllGymRecords();
 
-    // Do not limit this list.
-    // IndexedDB keeps the complete workout history.
-    const sessions =
-        await getAllGymRecords();
-
-    // Keep history in chronological order.
     return sessions.sort(
-        (a, b) =>
-            new Date(a.date) -
-            new Date(b.date)
+        (a, b) => new Date(a.date) - new Date(b.date)
     );
 }
 
 
 // Load history for one exercise.
-export async function loadExerciseHistory(
-    exerciseId
-) {
+export async function loadExerciseHistory(exerciseId) {
+    const sessions = await loadAllGymSessions();
 
-    // Load the complete Gym history.
-    const sessions =
-        await loadAllGymSessions();
-
-    // Return every session with the same exercise ID.
-    //
-    // Same ID = same exercise history.
-    //
-    // Different ID = separate exercise history.
-    return sessions.filter(
-        (session) =>
-            session.exerciseId === exerciseId
-    );
+    return sessions.filter((session) => session.exerciseId === exerciseId);
 }
