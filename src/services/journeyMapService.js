@@ -32,9 +32,13 @@ export async function loadJourneyData(
     const monthIndex =
         (year - currentPhaseStartYear) * 12 +
         (month - CurrentPhaseStartMonth);
+    
+  
+
 
     const tradingMonth =
         tradingRecord.months?.[monthIndex];
+    
 
     const missions =
         tradingMonth?.missions ?? [];
@@ -70,9 +74,11 @@ export async function loadJourneyData(
         });
     }
 
+
     return {
         availableDates,
         completedDates: mergedCompletedDates,
+        
     };
 }
 

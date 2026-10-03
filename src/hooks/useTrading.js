@@ -7,7 +7,7 @@ import {
   tradingLevels,
   tradingMissionTemplates,
   currentPhaseStartYear,
-  CurrentPhaseStartMonth
+  CurrentPhaseStartMonth,
 } from "../data/trading";
 
 import {
@@ -26,71 +26,57 @@ import {
   saveCurrentTradingRecord,
 } from "../services/tradingService";
 
-
 /* =========================================================
    HOOK
 ========================================================= */
 
 export function useTrading() {
-
   /* =========================================================
      MONTH STATE
   ========================================================= */
 
-  const [months, setMonths] = useState(
-    trading.months
-  );
+  const [months, setMonths] = useState(trading.months);
 
+  /* =========================================================
+     FIRST INCOMPLETE MISSION STATE
+  ========================================================= */
+
+  const [currentIncompleteMission, setCurrentIncompleteMission] = useState(null);
 
   /* =========================================================
      TOTAL XP STATE
   ========================================================= */
 
   // Lifetime XP.
-  //
   // This never resets when the player levels up.
-  const [totalXP, setTotalXP] = useState(
-    trading.skill.currentXP
-  );
-
+  const [totalXP, setTotalXP] = useState(trading.skill.currentXP);
 
   /* =========================================================
      EXPANDED MONTH STATE
   ========================================================= */
 
-  const [expandedMonths, setExpandedMonths] =
-    useState({
-      june: true,
-    });
-
+  const [expandedMonths, setExpandedMonths] = useState({
+    june: true,
+  });
 
   /* =========================================================
      LOADING STATE
   ========================================================= */
 
-  const [isLoading, setIsLoading] =
-    useState(true);
-
+  const [isLoading, setIsLoading] = useState(true);
 
   /* =========================================================
      LOAD + GENERATE TRADING DATA
   ========================================================= */
 
   useEffect(() => {
-
     async function loadTrading() {
-
       try {
+        const record = await loadTradingRecord();
 
-        const record =
-          await loadTradingRecord();
-      
+        let savedMonths = record?.months ?? trading.months;
 
-
-        let savedMonths =
-          record?.months ?? trading.months;
-        
-          // 2. Check if the last mission of the last month is completed
+        // 2. Check if the last mission of the last month is completed
         const lastMonth = savedMonths[savedMonths.length - 1];
         const lastMission = lastMonth?.missions?.[lastMonth.missions.length - 1];
         const isLastMissionDone = Boolean(lastMission?.done);
@@ -99,139 +85,99 @@ export function useTrading() {
           // Compare the recorded phase number against the default phase number
           const recordedPhaseNumber = record?.phaseNumber;
           const defaultPhaseNumber = trading.phase.number;
-        
+
           if (recordedPhaseNumber !== defaultPhaseNumber) {
             savedMonths = trading.months;
           }
         }
 
+        // Tracks the first occurrence of done: false across all months
+        let firstIncomplete = null;
 
-        const generatedMonths =
-          savedMonths.map(
-            (month, index) => {
-              const absoluteMonth = CurrentPhaseStartMonth + index;
-              const currentYear = currentPhaseStartYear + Math.floor(absoluteMonth / 12);
-              const currentMonth = absoluteMonth % 12; // Always stays within 0 to 11
+        const generatedMonths = savedMonths.map((month, index) => {
+          const absoluteMonth = CurrentPhaseStartMonth + index;
+          const currentYear =
+            currentPhaseStartYear + Math.floor(absoluteMonth / 12);
+          const currentMonth = absoluteMonth % 12; // Always stays within 0 to 11
 
-              const generatedMissions =
-                generateMonthlyMissions(
-                  currentYear,
-                  currentMonth,
-                  tradingMissionTemplates
-                );
-
-
-              const oldMissions =
-                month.missions ?? [];
-
-
-              const missions =
-                generatedMissions.map(
-                  (mission) => {
-
-                    const oldMission =
-                      oldMissions.find(
-                        (old) =>
-                          old.type === mission.type &&
-                          JSON.stringify(old.week) ===
-                          JSON.stringify(mission.week)
-                      );
-
-
-                    return {
-                      ...mission,
-
-                      done:
-                        oldMission?.done ?? false,
-                    };
-
-                  }
-                );
-
-
-              return {
-                ...month,
-                missions,
-              };
-
-            }
+          const generatedMissions = generateMonthlyMissions(
+            currentYear,
+            currentMonth,
+            tradingMissionTemplates
           );
 
+          const oldMissions = month.missions ?? [];
 
-        setMonths(
-          generatedMonths
-        );
+          const missions = generatedMissions.map((mission) => {
+            const oldMission = oldMissions.find(
+              (old) =>
+                old.type === mission.type &&
+                JSON.stringify(old.week) === JSON.stringify(mission.week)
+            );
 
+            const isDone = oldMission?.done ?? false;
+
+            const updatedMission = {
+              ...mission,
+              done: isDone,
+            };
+
+            // Store only the first time an uncompleted mission is encountered
+            if (!isDone && firstIncomplete === null) {
+              firstIncomplete = {
+                monthIndex: index,
+                mission: updatedMission,
+              };
+            }
+
+            return updatedMission;
+          });
+
+          return {
+            ...month,
+            missions,
+          };
+        });
+
+        setMonths(generatedMonths);
+        setCurrentIncompleteMission(firstIncomplete);
 
         /* -----------------------------------------------------
            IndexedDB currentXP = lifetime XP.
         ----------------------------------------------------- */
 
-        if (
-          record?.currentXP !== undefined
-        ) {
-
-          setTotalXP(
-            record.currentXP
-          );
-
+        if (record?.currentXP !== undefined) {
+          setTotalXP(record.currentXP);
         }
-
       } catch (error) {
-
-        console.error(
-          "Failed to load trading data:",
-          error
-        );
-
+        console.error("Failed to load trading data:", error);
       } finally {
-
         setIsLoading(false);
-
       }
-
     }
 
-
     loadTrading();
-
   }, []);
-
 
   /* =========================================================
      MONTH UNLOCK SYSTEM
   ========================================================= */
 
-  const updatedMonths =
-    calculateMonthUnlocks(
-      months
-    );
-
+  const updatedMonths = calculateMonthUnlocks(months);
 
   /* =========================================================
      MISSION XP
   ========================================================= */
 
   // Display-only mission XP.
-  //
-  // It is NOT added to totalXP here because totalXP
-  // already contains awarded mission XP.
-  const earnedMissionXP =
-    calculateTotalMissionXP(
-      updatedMonths
-    );
-
+  // It is NOT added to totalXP here because totalXP already contains awarded mission XP.
+  const earnedMissionXP = calculateTotalMissionXP(updatedMonths);
 
   /* =========================================================
      TRADING LEVEL
   ========================================================= */
 
-  const levelData =
-    calculateTradingLevelData(
-      totalXP,
-      tradingLevels
-    );
-
+  const levelData = calculateTradingLevelData(totalXP, tradingLevels);
 
   const {
     currentLevelXP,
@@ -240,282 +186,146 @@ export function useTrading() {
     xpProgress,
   } = levelData;
 
-
   /* =========================================================
      FULL CURRENT LEVEL OBJECT
   ========================================================= */
 
-  // calculateTradingLevelData currently returns the level
-  // number in currentLevel.
-  //
-  // Find the complete level object so the Trading page can use:
-  //
-  // currentLevel.level
-  // currentLevel.name
-  // currentLevel.theme
   const currentLevel =
-    tradingLevels.find(
-      (level) =>
-        level.level === levelData.currentLevel
-    ) ??
+    tradingLevels.find((level) => level.level === levelData.currentLevel) ??
     tradingLevels[0];
-
 
   /* =========================================================
      PHASE PROGRESS
   ========================================================= */
 
-  const phaseProgress =
-    calculatePhaseMissionProgress(
-      updatedMonths
-    );
-
+  const phaseProgress = calculatePhaseMissionProgress(updatedMonths);
 
   /* =========================================================
      MONTH EXPAND / COLLAPSE
   ========================================================= */
 
-  const toggleMonth = (
-    monthId
-  ) => {
-
-    const month =
-      updatedMonths.find(
-        (month) =>
-          month.id === monthId
-      );
-
+  const toggleMonth = (monthId) => {
+    const month = updatedMonths.find((month) => month.id === monthId);
 
     if (!month?.unlocked) {
       return;
     }
 
-
-    setExpandedMonths(
-      (current) => ({
-        ...current,
-
-        [monthId]:
-          !current[monthId],
-      })
-    );
-
+    setExpandedMonths((current) => ({
+      ...current,
+      [monthId]: !current[monthId],
+    }));
   };
-
 
   /* =========================================================
      TOGGLE MONTHLY MISSION
   ========================================================= */
 
-  const toggleMission = async (
-    monthId,
-    missionId
-  ) => {
-
+  const toggleMission = async (monthId, missionId) => {
     let missionXP = 0;
 
+    const nextMonths = months.map((month) => {
+      if (month.id !== monthId) {
+        return month;
+      }
 
-    const updatedMonths =
-      months.map(
-        (month) => {
-
-          if (
-            month.id !== monthId
-          ) {
-            return month;
-          }
-
-
-          const missionIndex =
-            month.missions.findIndex(
-              (mission) =>
-                mission.id === missionId
-            );
-
-
-          if (
-            missionIndex === -1
-          ) {
-            return month;
-          }
-
-
-          const currentMission =
-            month.missions[
-            missionIndex
-            ];
-
-
-          /* ---------------------------------------------------
-             Completed missions are permanent.
-          --------------------------------------------------- */
-
-          if (
-            currentMission.done
-          ) {
-            return month;
-          }
-
-
-          /* ---------------------------------------------------
-             Missions must be completed sequentially.
-          --------------------------------------------------- */
-
-          if (
-            missionIndex > 0
-          ) {
-
-            const previousMission =
-              month.missions[
-              missionIndex - 1
-              ];
-
-
-            if (
-              !previousMission.done
-            ) {
-              return month;
-            }
-
-          }
-
-
-          /* ---------------------------------------------------
-             Award XP exactly once.
-          --------------------------------------------------- */
-
-          missionXP =
-            currentMission.xp;
-
-
-          return {
-            ...month,
-
-            missions:
-              month.missions.map(
-                (mission, index) => {
-
-                  if (
-                    index !== missionIndex
-                  ) {
-                    return mission;
-                  }
-
-
-                  return {
-                    ...mission,
-                    done: true,
-                  };
-
-                }
-              ),
-          };
-
-        }
+      const missionIndex = month.missions.findIndex(
+        (mission) => mission.id === missionId
       );
 
+      if (missionIndex === -1) {
+        return month;
+      }
 
-    if (
-      missionXP <= 0
-    ) {
+      const currentMission = month.missions[missionIndex];
+
+      /* ---------------------------------------------------
+         Completed missions are permanent.
+      --------------------------------------------------- */
+      if (currentMission.done) {
+        return month;
+      }
+
+      /* ---------------------------------------------------
+         Missions must be completed sequentially.
+      --------------------------------------------------- */
+      if (missionIndex > 0) {
+        const previousMission = month.missions[missionIndex - 1];
+
+        if (!previousMission.done) {
+          return month;
+        }
+      }
+
+      /* ---------------------------------------------------
+         Award XP exactly once.
+      --------------------------------------------------- */
+      missionXP = currentMission.xp;
+
+      return {
+        ...month,
+        missions: month.missions.map((mission, index) => {
+          if (index !== missionIndex) {
+            return mission;
+          }
+
+          return {
+            ...mission,
+            done: true,
+          };
+        }),
+      };
+    });
+
+    if (missionXP <= 0) {
       return;
     }
-
 
     /* =======================================================
        CALCULATE NEW LIFETIME XP
     ======================================================= */
 
-    const newTotalXP =
-      totalXP +
-      missionXP;
+    const newTotalXP = totalXP + missionXP;
 
-
-    setMonths(
-      updatedMonths
-    );
-
-    setTotalXP(
-      newTotalXP
-    );
-
+    setMonths(nextMonths);
+    setTotalXP(newTotalXP);
 
     /* =======================================================
        SAVE LIFETIME XP
     ======================================================= */
 
-    await saveCurrentTradingRecord(
-      updatedMonths,
-      newTotalXP,
-      {
-        date:
-          new Date()
-            .toISOString()
-            .split("T")[0],
-      }
-    );
-
+    await saveCurrentTradingRecord(nextMonths, newTotalXP, {
+      date: new Date().toISOString().split("T")[0],
+    });
   };
-
 
   /* =========================================================
      DAYS REMAINING
   ========================================================= */
 
-  const daysRemaining =
-    calculateDaysRemaining(
-      trading.phase.endDate
-    );
-
+  const daysRemaining = calculateDaysRemaining(trading.phase.endDate);
 
   /* =========================================================
      RETURN
   ========================================================= */
 
   return {
-
-    months:
-      updatedMonths,
-
-    // Lifetime XP.
-    currentXP:
-      totalXP,
-
-    // FULL level object.
-    //
-    // Example:
-    // {
-    //   level: 1,
-    //   name: "Rookie Trader",
-    //   xpRequired: 100,
-    //   theme: "from-indigo-600 via-violet-600 to-purple-700"
-    // }
+    months: updatedMonths,
+    currentXP: totalXP,
+    earnedMissionXP,
     currentLevel,
-
     currentLevelXP,
-
     nextLevelTotalXP,
-
     xpRequiredForNextLevel,
-
     xpProgress,
-
     phaseProgress,
-
     expandedMonths,
-
     isLoading,
-
     daysRemaining,
-
+    currentIncompleteMission,
     calculateMonthProgress,
-
     calculateMonthXP,
-
     toggleMonth,
-
     toggleMission,
-
   };
-
 }

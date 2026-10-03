@@ -57,33 +57,14 @@ function Trading({ setActivePage }) {
   const audioRef = useRef(null);
 
   useEffect(() => {
-    const el = audioRef.current;
-    console.log("el value ", el);
-    if (!el) return;
-    el.volume = audio?.volume ?? 0.02;
-    console.log("🔊 SET ACTUAL VOLUME:", el.volume)
-  
-    const logAudio = () => {
-      console.log("🔊 LIVE AUDIO:", {
-        volume: el.volume,
-        muted: el.muted,
-        paused: el.paused,
-        currentSrc: el.currentSrc,
-        currentTime: el.currentTime,
-      });
-    };
-  
-    logAudio();
-    el.addEventListener("play", logAudio);
-    el.addEventListener("volumechange", logAudio);
-    el.addEventListener("pause", logAudio);
-  
-    return () => {
-      el.removeEventListener("play", logAudio);
-      el.removeEventListener("volumechange", logAudio);
-      el.removeEventListener("pause", logAudio);
-    };
-  }, [audio?.src]);
+    if (audioRef.current && audio?.src) {
+      const resolvedSrc = resolveAudioUrl(audio.src);
+      if (!audioRef.current.src.endsWith(audio.src)) {
+        audioRef.current.src = resolvedSrc;
+      }
+      audioRef.current.volume = audio.volume ?? 0.5;
+    }
+  }, [audio?.src, audio?.volume]);
 
   useEffect(() => {
     const handleFirstInteraction = () => {
@@ -132,19 +113,7 @@ function Trading({ setActivePage }) {
     <div className={`min-h-screen ${theme.bgGradient} text-slate-900 transition-colors duration-500`}>
       {audio?.src && (
         <audio
-          // ref={audioRef}
-          ref={(el) => {
-            audioRef.current = el;
-        
-            if (el) {
-              console.log("🎯 AUDIO MOUNTED");
-              console.log("volume BEFORE:", el.volume);
-        
-              el.volume = audio?.volume ?? 0.02;
-        
-              console.log("volume AFTER:", el.volume);
-            }
-          }}
+          ref={audioRef}
           src={resolveAudioUrl(audio.src)}
           loop
           preload="auto"
