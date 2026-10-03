@@ -41,7 +41,6 @@ function Trading({ setActivePage }) {
     months,
     currentXP,
     currentLevel,
-    nextLevelTotalXP,
     xpProgress,
     xpRequiredForNextLevel,
     phaseProgress,
@@ -56,38 +55,34 @@ function Trading({ setActivePage }) {
 
   const audioRef = useRef(null);
 
+  // Enforces low volume immediately and locks it during playback/loading events
   useEffect(() => {
     const el = audioRef.current;
-    console.log("el value ", el);
-    if (!el) return;
-    el.volume = audio?.volume ?? 0.02;
-    console.log("🔊 SET ACTUAL VOLUME:", el.volume)
-  
-    const logAudio = () => {
-      console.log("🔊 LIVE AUDIO:", {
-        volume: el.volume,
-        muted: el.muted,
-        paused: el.paused,
-        currentSrc: el.currentSrc,
-        currentTime: el.currentTime,
-      });
+    if (!el || audio?.volume == null) return;
+
+    const enforceVolume = () => {
+      el.volume = audio.volume;
     };
-  
-    logAudio();
-    el.addEventListener("play", logAudio);
-    el.addEventListener("volumechange", logAudio);
-    el.addEventListener("pause", logAudio);
-  
+
+    enforceVolume();
+
+    el.addEventListener("loadedmetadata", enforceVolume);
+    el.addEventListener("canplay", enforceVolume);
+    el.addEventListener("play", enforceVolume);
+
     return () => {
-      el.removeEventListener("play", logAudio);
-      el.removeEventListener("volumechange", logAudio);
-      el.removeEventListener("pause", logAudio);
+      el.removeEventListener("loadedmetadata", enforceVolume);
+      el.removeEventListener("canplay", enforceVolume);
+      el.removeEventListener("play", enforceVolume);
     };
-  }, [audio?.src]);
+  }, [audio?.src, audio?.volume]);
 
   useEffect(() => {
     const handleFirstInteraction = () => {
       if (audioRef.current && audioRef.current.paused && audio?.src) {
+        if (audio.volume != null) {
+          audioRef.current.volume = audio.volume;
+        }
         audioRef.current
           .play()
           .then(() => {
@@ -111,7 +106,7 @@ function Trading({ setActivePage }) {
       window.removeEventListener("click", handleFirstInteraction);
       window.removeEventListener("wheel", handleFirstInteraction);
     };
-  }, [audio?.src]);
+  }, [audio?.src, audio?.volume]);
 
   if (isLoading) {
     return (
@@ -132,19 +127,7 @@ function Trading({ setActivePage }) {
     <div className={`min-h-screen ${theme.bgGradient} text-slate-900 transition-colors duration-500`}>
       {audio?.src && (
         <audio
-          // ref={audioRef}
-          ref={(el) => {
-            audioRef.current = el;
-        
-            if (el) {
-              console.log("🎯 AUDIO MOUNTED");
-              console.log("volume BEFORE:", el.volume);
-        
-              el.volume = audio?.volume ?? 0.02;
-        
-              console.log("volume AFTER:", el.volume);
-            }
-          }}
+          ref={audioRef}
           src={resolveAudioUrl(audio.src)}
           loop
           preload="auto"

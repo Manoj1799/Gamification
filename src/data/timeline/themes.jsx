@@ -23,7 +23,7 @@ export const DiyaIcon = ({ className = "h-4 w-4" }) => (
 );
 
 /* =========================================================
-   2. SYNTHETIC SOUND ENGINE (Native Web Audio API)
+   2. SYNTHETIC SOUND ENGINE (Original Click Values)
 ========================================================= */
 
 class SoundEngine {
@@ -104,7 +104,7 @@ class SoundEngine {
       this.init();
       if (!this.ctx) return;
 
-      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+      const notes = [523.25, 659.25, 783.99];
       notes.forEach((freq, idx) => {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -131,7 +131,7 @@ class SoundEngine {
       this.init();
       if (!this.ctx) return;
 
-      const notes = [587.33, 880, 1174.66]; // D5, A5, D6
+      const notes = [587.33, 880, 1174.66];
       notes.forEach((freq, idx) => {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -198,13 +198,12 @@ class SoundEngine {
 export const soundEngine = new SoundEngine();
 
 /* =========================================================
-   3. FLOATING PARTICLES (Direction & Multiplier Aware)
+   3. FLOATING PARTICLES
 ========================================================= */
 
 export function ThemeParticles({ config, multiplier = 1.0 }) {
   if (!config || !config.enabled) return null;
 
-  // Scales count by multiplier (pre: 0.5x, peak: 1.0x, post: 0.35x)
   const baseCount = config.count || 24;
   const count = Math.max(6, Math.round(baseCount * multiplier));
   const isFalling = config.direction === "down";
@@ -228,40 +227,18 @@ export function ThemeParticles({ config, multiplier = 1.0 }) {
     <>
       <style>{`
         @keyframes floatAllTheWayUp {
-          0% {
-            transform: translateY(0) scale(0.7);
-            opacity: 0;
-          }
-          8% {
-            opacity: 0.7;
-          }
-          50% {
-            opacity: 0.35;
-          }
-          88% {
-            opacity: 0.35;
-          }
-          100% {
-            transform: translateY(-108vh) scale(1.1);
-            opacity: 0;
-          }
+          0% { transform: translateY(0) scale(0.7); opacity: 0; }
+          8% { opacity: 0.7; }
+          50% { opacity: 0.35; }
+          88% { opacity: 0.35; }
+          100% { transform: translateY(-108vh) scale(1.1); opacity: 0; }
         }
 
         @keyframes rainDownwards {
-          0% {
-            transform: translateY(-10vh);
-            opacity: 0;
-          }
-          15% {
-            opacity: 0.6;
-          }
-          85% {
-            opacity: 0.6;
-          }
-          100% {
-            transform: translateY(105vh);
-            opacity: 0;
-          }
+          0% { transform: translateY(-10vh); opacity: 0; }
+          15% { opacity: 0.6; }
+          85% { opacity: 0.6; }
+          100% { transform: translateY(105vh); opacity: 0; }
         }
       `}</style>
 
@@ -302,12 +279,15 @@ export function ThemeParticles({ config, multiplier = 1.0 }) {
 
 /* =========================================================
    4. COMPLETE THEMES REGISTRY
+   Background volume set to low gentle ambient (0.004)
 ========================================================= */
 
+const LOW_AMBIENT_VOLUME = 0.004;
+
 export const themes = {
-  // ---------------- DEFAULT ----------------
   default: {
     name: "Default",
+    volume: LOW_AMBIENT_VOLUME,
     bgGradient: "bg-gradient-to-br from-indigo-50 via-white to-cyan-50",
     headerTagBg: "bg-indigo-100",
     headerTagText: "text-indigo-600 hover:bg-indigo-200",
@@ -329,15 +309,13 @@ export const themes = {
       sparkleColor: "text-amber-400",
       greeting: "Build skill. Complete phases. Level up.",
     },
-    particles: {
-      enabled: false,
-    },
+    particles: { enabled: false },
     playSound: () => soundEngine.playDefaultClick(),
   },
 
-  // ---------------- FESTIVALS ----------------
   diwali: {
     name: "Diwali",
+    volume: LOW_AMBIENT_VOLUME,
     bgGradient: "bg-gradient-to-br from-amber-50 via-orange-50/40 to-yellow-50",
     headerTagBg: "bg-amber-100 border border-amber-200",
     headerTagText: "text-amber-700 hover:bg-amber-200",
@@ -374,6 +352,7 @@ export const themes = {
 
   holi: {
     name: "Holi",
+    volume: LOW_AMBIENT_VOLUME,
     bgGradient: "bg-gradient-to-br from-pink-50 via-purple-50/40 to-emerald-50",
     headerTagBg: "bg-pink-100 border border-pink-200",
     headerTagText: "text-pink-600 hover:bg-pink-200",
@@ -416,6 +395,7 @@ export const themes = {
 
   independence_day: {
     name: "Independence Day",
+    volume: LOW_AMBIENT_VOLUME,
     bgGradient: "bg-gradient-to-br from-orange-50 via-white to-green-50",
     headerTagBg: "bg-orange-100 border border-orange-200",
     headerTagText: "text-orange-700 hover:bg-orange-200",
@@ -451,6 +431,7 @@ export const themes = {
 
   republic_day: {
     name: "Republic Day",
+    volume: LOW_AMBIENT_VOLUME,
     bgGradient: "bg-gradient-to-br from-blue-50 via-white to-orange-50",
     headerTagBg: "bg-blue-100 border border-blue-200",
     headerTagText: "text-blue-700 hover:bg-blue-200",
@@ -486,6 +467,7 @@ export const themes = {
 
   birthday: {
     name: "Birthday",
+    volume: LOW_AMBIENT_VOLUME,
     bgGradient: "bg-gradient-to-br from-fuchsia-50 via-pink-50 to-amber-50",
     headerTagBg: "bg-fuchsia-100 border border-fuchsia-200",
     headerTagText: "text-fuchsia-700 hover:bg-fuchsia-200",
@@ -519,9 +501,9 @@ export const themes = {
     playSound: () => soundEngine.playBirthdayChime(),
   },
 
-  // ---------------- SEASONS ----------------
   summer: {
     name: "Summer",
+    volume: LOW_AMBIENT_VOLUME,
     bgGradient: "bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-yellow-50/70",
     headerTagBg: "bg-amber-100",
     headerTagText: "text-amber-800",
@@ -558,6 +540,7 @@ export const themes = {
 
   rainy: {
     name: "Monsoon",
+    volume: LOW_AMBIENT_VOLUME,
     bgGradient: "bg-gradient-to-br from-sky-50 via-slate-50 to-teal-50",
     headerTagBg: "bg-sky-100",
     headerTagText: "text-sky-700",
@@ -595,6 +578,7 @@ export const themes = {
 
   winter: {
     name: "Winter",
+    volume: LOW_AMBIENT_VOLUME,
     bgGradient: "bg-gradient-to-br from-slate-50 via-indigo-50/30 to-sky-50",
     headerTagBg: "bg-slate-100",
     headerTagText: "text-slate-700",
