@@ -45,13 +45,14 @@ const gymProgram = {
         defaultSets: 3,
         defaultReps: 10,
       },
-      {
+/*      {
         id: "face-pull",
         name: "Rope Face Pull",
         defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
       },
+*/      
     ],
   },
 
@@ -86,14 +87,14 @@ const gymProgram = {
         defaultSets: 3,
         defaultReps: 10,
       },
-      {
+/*      {
         id: "hyperextension",
         name: "HyperExtension",
         defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
       },
-    ],
+*/    ],
   },
 
   tuesday: {
@@ -106,14 +107,14 @@ const gymProgram = {
         defaultSets: 3,
         defaultReps: 10,
       },
-      {
+/*      {
         id: "leg-extension",
         name: "Leg Extension",
         defaultWeight: 15,
         defaultSets: 3,
         defaultReps: 10,
       },
-      {
+*/    {
         id: "romanian-deadlift",
         name: "Romanian Deadlift Barbell Rod",
         defaultWeight: 5,
@@ -155,12 +156,20 @@ const gymProgram = {
         defaultReps: 10,
       },
       {
+        id: "romanian-deadlift2",
+        name: "Romanian Deadlift (Dumbells)",
+        defaultWeight: 2.5,
+        defaultSets: 3,
+        defaultReps: 10,
+      },
+/*      {
         id: "dumbell-curl",
         name: "Dumbell Bicep Curl",
         defaultWeight: 5,
         defaultSets: 3,
         defaultReps: 10,
       },
+*/      
       {
         id: "overhead-triceps",
         name: "Overhead Cable Triceps Extension",
@@ -168,13 +177,7 @@ const gymProgram = {
         defaultSets: 3,
         defaultReps: 10,
       },
-      {
-        id: "lateral raise",
-        name: "Dumbell Lateral Raise",
-        defaultWeight: 5,
-        defaultSets: 3,
-        defaultReps: 10,
-      },
+
     ],
   },
 
@@ -190,13 +193,6 @@ const gymProgram = {
       },
 
       {
-        id: "romanian-deadlift2",
-        name: "Romanian Deadlift (Dumbells)",
-        defaultWeight: 2.5,
-        defaultSets: 3,
-        defaultReps: 10,
-      },
-      {
         id: "calf-raise",
         name: "Calf Raise",
         defaultWeight: 30,
@@ -204,12 +200,20 @@ const gymProgram = {
         defaultReps: 10,
       },
       {
+        id: "lateral raise",
+        name: "Dumbell Lateral Raise",
+        defaultWeight: 5,
+        defaultSets: 3,
+        defaultReps: 10,
+      },
+/*      {
         id: "db-lunges",
         name: "Dumbbell Lunges",
         defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
       },
+*/      
       {
         id: "abs-crunch",
         name: "Decline Abs Bench Crunch",
