@@ -45,6 +45,22 @@ const gymProgram = {
         defaultSets: 3,
         defaultReps: 10,
       },
+      {
+        id: "wrist-curls",
+        name: "Wrist Curls",
+        defaultWeight: 10,
+        defaultSets: 1,
+        defaultReps: 25,
+      },
+            {
+        id: "reverse-wrist-curls",
+        name: "Reverse Wrist Curls",
+        defaultWeight: 5,
+        defaultSets: 1,
+        defaultReps: 25,
+      },
+            
+            
 /*      {
         id: "face-pull",
         name: "Rope Face Pull",
@@ -86,6 +102,20 @@ const gymProgram = {
         defaultWeight: 5,
         defaultSets: 3,
         defaultReps: 10,
+      },
+      {
+        id: "wrist-curls",
+        name: "Wrist Curls",
+        defaultWeight: 10,
+        defaultSets: 1,
+        defaultReps: 25,
+      },
+      {
+        id: "reverse-wrist-curls",
+        name: "Reverse Wrist Curls",
+        defaultWeight: 5,
+        defaultSets: 1,
+        defaultReps: 25,
       },
 /*      {
         id: "hyperextension",
@@ -135,6 +165,20 @@ const gymProgram = {
         defaultSets: 3,
         defaultReps: 10,
       },
+      {
+        id: "wrist-curls",
+        name: "Wrist Curls",
+        defaultWeight: 10,
+        defaultSets: 1,
+        defaultReps: 25,
+      },
+      {
+        id: "reverse-wrist-curls",
+        name: "Reverse Wrist Curls",
+        defaultWeight: 5,
+        defaultSets: 1,
+        defaultReps: 25,
+      },
     ],
   },
 
@@ -161,6 +205,20 @@ const gymProgram = {
         defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
+      },
+      {
+        id: "wrist-curls",
+        name: "Wrist Curls",
+        defaultWeight: 10,
+        defaultSets: 1,
+        defaultReps: 25,
+      },
+      {
+        id: "reverse-wrist-curls",
+        name: "Reverse Wrist Curls",
+        defaultWeight: 5,
+        defaultSets: 1,
+        defaultReps: 25,
       },
 /*      {
         id: "dumbell-curl",
@@ -220,6 +278,20 @@ const gymProgram = {
         defaultWeight: 2.5,
         defaultSets: 3,
         defaultReps: 10,
+      },
+      {
+        id: "wrist-curls",
+        name: "Wrist Curls",
+        defaultWeight: 10,
+        defaultSets: 1,
+        defaultReps: 25,
+      },
+      {
+        id: "reverse-wrist-curls",
+        name: "Reverse Wrist Curls",
+        defaultWeight: 5,
+        defaultSets: 1,
+        defaultReps: 25,
       },
 
     ],

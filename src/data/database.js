@@ -254,29 +254,103 @@ export async function addNoFapRecord(record) {
   });
 }
 
-// Get complete No Fap history.
 export async function getAllNoFapRecords() {
   const db = await openDatabase();
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(
-      NO_FAP_STORE_NAME,
-      "readonly"
-    );
+      const transaction = db.transaction(
+          NO_FAP_STORE_NAME,
+          "readonly"
+      );
 
-    const store = transaction.objectStore(NO_FAP_STORE_NAME);
-    const request = store.getAll();
+      const store = transaction.objectStore(NO_FAP_STORE_NAME);
+      const request = store.getAll();
 
-    request.onsuccess = () => {
-      resolve(request.result || []);
-    };
+      request.onsuccess = () => {
+          resolve(
+              (request.result || []).filter(
+                  record => record.type !== "workDone"
+              )
+          );
+      };
 
-    request.onerror = () => {
-      reject(request.error);
-    };
+      request.onerror = () => reject(request.error);
   });
 }
+// ========================================
+// WORK DONE RECORDS
+// ========================================
 
+export async function getAllWorkRecords() {
+    const db = await openDatabase();
+
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(
+            NO_FAP_STORE_NAME,
+            "readonly"
+        );
+
+        const store = transaction.objectStore(NO_FAP_STORE_NAME);
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+            resolve(
+                (request.result || []).filter(
+                    record => record.type === "workDone"
+                )
+            );
+        };
+
+        request.onerror = () => reject(request.error);
+    });
+}
+
+export async function markWorkDone(date) {
+    const db = await openDatabase();
+
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(
+            NO_FAP_STORE_NAME,
+            "readwrite"
+        );
+
+        const store = transaction.objectStore(NO_FAP_STORE_NAME);
+
+        store.add({
+            id: `work:${date}`,
+            date,
+            type: "workDone",
+            done: true,
+            recordedOn: new Date().toISOString(),
+        });
+
+        transaction.oncomplete = () => resolve();
+
+        transaction.onerror = () => reject(transaction.error);
+
+        transaction.onabort = () => reject(transaction.error);
+    });
+}
+export async function addWorkRecord(record) {
+  const db = await openDatabase();
+
+  return new Promise((resolve, reject) => {
+      const transaction = db.transaction(
+          NO_FAP_STORE_NAME,
+          "readwrite"
+      );
+
+      transaction.objectStore(NO_FAP_STORE_NAME).add({
+          ...record,
+          id: `work:${record.date}`,
+          type: "workDone",
+      });
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+  });
+}
 // ================================
 // SAFE DATA HELPERS
 // ================================

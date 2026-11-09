@@ -1,65 +1,43 @@
-// React state management.
 import { useEffect, useMemo, useState } from "react";
 
-// Icons.
 import {
     Check,
     ChevronLeft,
     ChevronRight,
-    Lock,
     ShieldAlert,
     X,
 } from "lucide-react";
 
-// No Fap service.
 import {
     loadNoFapData,
     recordNoFapAnswer,
 } from "../services/noFapServices";
 
-// Date formatting.
+import {
+    loadWorkData,
+    recordWorkDone,
+} from "../services/workServices";
+
 import {
     formatDate,
     formatDisplayDate,
     getYesterdayDate,
 } from "../logic/noFap";
 
-// ========================================
-// NO FAP PAGE
-// ========================================
-
 export default function NoFap() {
-    // Current No Fap record for yesterday.
-    const [todayRecord, setTodayRecord] = useState(null);
-
-    // All historical records.
     const [records, setRecords] = useState([]);
+    const [workRecords, setWorkRecords] = useState([]);
 
-    // Current base penalty.
-    const [basePenalty, setBasePenalty] = useState(10);
-
-    // Total donated amount.
-    const [totalDonated, setTotalDonated] = useState(0);
-
-    // Loading state.
     const [isLoading, setIsLoading] = useState(true);
+    const [isSavingNoFap, setIsSavingNoFap] = useState(false);
+    const [isSavingWork, setIsSavingWork] = useState(false);
 
-    // popup after yes faped 
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
-
-    // Saving state.
-    const [isSaving, setIsSaving] = useState(false);
-
-    // Current calendar month.
     const [calendarMonth, setCalendarMonth] = useState(() => {
-        const date = new Date();
-
-        return new Date(
-            date.getFullYear(),
-            date.getMonth(),
-            1
-        );
+        const today = new Date();
+        return new Date(today.getFullYear(), today.getMonth(), 1);
     });
+
+    const reportedDate = getYesterdayDate();
 
     // ========================================
     // LOAD DATA
@@ -67,14 +45,15 @@ export default function NoFap() {
 
     async function load() {
         try {
-            const data = await loadNoFapData();
+            const [noFapData, workData] = await Promise.all([
+                loadNoFapData(),
+                loadWorkData(),
+            ]);
 
-            setTodayRecord(data.todayRecord);
-            setRecords(data.records);
-            setBasePenalty(data.basePenalty);
-            setTotalDonated(data.totalDonated);
+            setRecords(noFapData.records || []);
+            setWorkRecords(workData || []);
         } catch (error) {
-            console.error("No Fap load error:", error);
+            console.error("Data load error:", error);
         } finally {
             setIsLoading(false);
         }
@@ -85,47 +64,67 @@ export default function NoFap() {
     }, []);
 
     // ========================================
-    // ANSWER QUESTION
+    // YESTERDAY RECORDS
     // ========================================
 
-    async function handleAnswer(didFap) {
-        // Never allow another click while saving.
-        if (isSaving) {
-            return;
-        }
+    const yesterdayNoFapRecord = records.find(
+        record => record.date === reportedDate
+    );
 
-        // If today's answer already exists,
-        // it cannot be changed.
-        if (todayRecord) {
-            return;
-        }
+    const yesterdayWorkRecord = workRecords.find(
+        record => record.date === reportedDate
+    );
 
-        // Immediately lock the buttons.
-        setIsSaving(true);
+    const workAnswer = yesterdayWorkRecord
+        ? (
+            yesterdayWorkRecord.didWork ??
+            yesterdayWorkRecord.done ??
+            false
+        )
+        : null;
+
+    // ========================================
+    // NO FAP ANSWER
+    // ========================================
+
+    async function handleNoFapAnswer(didFap) {
+        if (yesterdayNoFapRecord || isSavingNoFap) return;
+
+        setIsSavingNoFap(true);
 
         try {
-            const record = await recordNoFapAnswer(didFap);
-
-            // Store the permanent answer in state.
-            setTodayRecord(record);
-
-            // Reload all data after recording.
+            await recordNoFapAnswer(didFap);
             await load();
         } catch (error) {
-            // If IndexedDB says the record already exists,
-            // reload the saved answer.
-            if (error.message === "NO_FAP_ALREADY_RECORDED") {
-                await load();
-            } else {
-                console.error("No Fap save error:", error);
-            }
+            console.error("NoFap save error:", error);
+            await load();
         } finally {
-            setIsSaving(false);
+            setIsSavingNoFap(false);
         }
     }
 
     // ========================================
-    // CALENDAR DATA
+    // WORK ANSWER
+    // ========================================
+
+    async function handleWorkAnswer(didWork) {
+        if (yesterdayWorkRecord || isSavingWork) return;
+
+        setIsSavingWork(true);
+
+        try {
+            await recordWorkDone(didWork);
+            await load();
+        } catch (error) {
+            console.error("Work save error:", error);
+            await load();
+        } finally {
+            setIsSavingWork(false);
+        }
+    }
+
+    // ========================================
+    // CALENDAR DAYS
     // ========================================
 
     const calendarDays = useMemo(() => {
@@ -133,8 +132,6 @@ export default function NoFap() {
         const month = calendarMonth.getMonth();
 
         const firstDay = new Date(year, month, 1);
-
-        // Convert Sunday = 0 into Monday = 0.
         const startingDay = (firstDay.getDay() + 6) % 7;
 
         const daysInMonth = new Date(
@@ -145,18 +142,14 @@ export default function NoFap() {
 
         const days = [];
 
-        // Empty cells before the first day.
         for (let i = 0; i < startingDay; i++) {
             days.push(null);
         }
 
-        // Actual calendar days.
         for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(year, month, day);
-
             days.push({
                 day,
-                date: formatDate(date),
+                date: formatDate(new Date(year, month, day)),
             });
         }
 
@@ -164,21 +157,31 @@ export default function NoFap() {
     }, [calendarMonth]);
 
     // ========================================
-    // RECORD LOOKUP
+    // RECORD LOOKUPS
     // ========================================
 
     const recordsByDate = useMemo(() => {
         const map = {};
 
-        for (const record of records) {
+        records.forEach(record => {
             map[record.date] = record;
-        }
+        });
 
         return map;
     }, [records]);
 
+    const workRecordsByDate = useMemo(() => {
+        const map = {};
+
+        workRecords.forEach(record => {
+            map[record.date] = record;
+        });
+
+        return map;
+    }, [workRecords]);
+
     // ========================================
-    // CALENDAR NAVIGATION
+    // MONTH NAVIGATION
     // ========================================
 
     function previousMonth() {
@@ -198,47 +201,77 @@ export default function NoFap() {
             1
         );
 
-        const current = new Date();
-
+        const today = new Date();
         const currentMonth = new Date(
-            current.getFullYear(),
-            current.getMonth(),
+            today.getFullYear(),
+            today.getMonth(),
             1
         );
 
-        // Do not allow future months.
-        if (next > currentMonth) {
-            return;
+        if (next <= currentMonth) {
+            setCalendarMonth(next);
         }
-
-        setCalendarMonth(next);
     }
 
     // ========================================
-    // LOADING STATE
+    // CALENDAR HEADER
+    // ========================================
+
+    function CalendarHeader() {
+        return (
+            <>
+                <div className="flex items-center justify-between">
+                    <button
+                        type="button"
+                        onClick={previousMonth}
+                        className="rounded-xl p-2"
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+
+                    <h2 className="font-bold">
+                        {calendarMonth.toLocaleDateString("en-IN", {
+                            month: "long",
+                            year: "numeric",
+                        })}
+                    </h2>
+
+                    <button
+                        type="button"
+                        onClick={nextMonth}
+                        className="rounded-xl p-2"
+                    >
+                        <ChevronRight size={20} />
+                    </button>
+                </div>
+
+                <div className="mt-4 grid grid-cols-7 gap-1 text-center">
+                    {["M", "T", "W", "T", "F", "S", "S"].map(
+                        (day, index) => (
+                            <div
+                                key={index}
+                                className="py-2 text-xs font-bold text-gray-400"
+                            >
+                                {day}
+                            </div>
+                        )
+                    )}
+                </div>
+            </>
+        );
+    }
+
+    // ========================================
+    // LOADING
     // ========================================
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="flex min-h-screen items-center justify-center">
                 <p className="text-gray-500">Loading...</p>
             </div>
         );
     }
-
-    // ========================================
-    // DATE
-    // ========================================
-
-    const reportedDate = getYesterdayDate();
-
-    const monthTitle = calendarMonth.toLocaleDateString(
-        "en-IN",
-        {
-            month: "long",
-            year: "numeric",
-        }
-    );
 
     // ========================================
     // PAGE
@@ -248,9 +281,7 @@ export default function NoFap() {
         <div className="min-h-screen bg-gray-50 px-4 py-6">
             <div className="mx-auto max-w-md space-y-5">
 
-                {/* ================================
-                    HEADER
-                ================================= */}
+                {/* HEADER */}
 
                 <div className="rounded-3xl bg-black p-6 text-white">
                     <div className="flex items-center gap-3">
@@ -262,102 +293,24 @@ export default function NoFap() {
                             </h1>
 
                             <p className="text-sm text-gray-400">
-                            Remember power cuts, forced early mornings, bus crowds, and they don't have to face this all. 
+                                Stay disciplined. Build better habits.
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {/* ================================
-                    PENALTY INFORMATION
-                ================================= */}
-
-                <div className="grid grid-cols-2 gap-3">
-
-                    {/* Base Penalty */}
-                    <div className="rounded-2xl bg-white p-4 shadow-sm">
-                        <p className="text-xs font-medium text-gray-500">
-                            Base Penalty
-                        </p>
-
-                        <p className="mt-1 text-2xl font-bold">
-                            ₹{basePenalty}
-                        </p>
-                    </div>
-
-                    {/* Total Donated */}
-                    <div className="rounded-2xl bg-white p-4 shadow-sm">
-                        <p className="text-xs font-medium text-gray-500">
-                            Total Donated
-                        </p>
-
-                        <p className="mt-1 text-2xl font-bold">
-                            ₹{totalDonated}
-                        </p>
-                    </div>
-
-                </div>
-
-                {/* ================================
-                    CALENDAR
-                ================================= */}
+                {/* NO FAP CALENDAR */}
 
                 <div className="rounded-3xl bg-white p-5 shadow-sm">
+                    <h2 className="mb-4 text-xl font-bold">
+                        NoFap Calendar
+                    </h2>
 
-                    {/* Calendar header */}
-                    <div className="flex items-center justify-between">
+                    <CalendarHeader />
 
-                        <button
-                            type="button"
-                            onClick={previousMonth}
-                            className="rounded-xl p-2 transition active:scale-90"
-                        >
-                            <ChevronLeft size={20} />
-                        </button>
-
-                        <h2 className="font-bold">
-                            {monthTitle}
-                        </h2>
-
-                        <button
-                            type="button"
-                            onClick={nextMonth}
-                            className="rounded-xl p-2 transition active:scale-90"
-                        >
-                            <ChevronRight size={20} />
-                        </button>
-
-                    </div>
-
-                    {/* Weekday labels */}
-                    <div className="mt-4 grid grid-cols-7 gap-1 text-center">
-
-                        {[
-                            "M",
-                            "T",
-                            "W",
-                            "T",
-                            "F",
-                            "S",
-                            "S",
-                        ].map((day, index) => (
-                            <div
-                                key={`${day}-${index}`}
-                                className="py-2 text-xs font-bold text-gray-400"
-                            >
-                                {day}
-                            </div>
-                        ))}
-
-                    </div>
-
-                    {/* Calendar days */}
                     <div className="grid grid-cols-7 gap-1">
-
-                        {calendarDays.map((calendarDay, index) => {
-
-                            // Empty calendar cell.
-                            if (!calendarDay) {
+                        {calendarDays.map((day, index) => {
+                            if (!day) {
                                 return (
                                     <div
                                         key={`empty-${index}`}
@@ -366,50 +319,35 @@ export default function NoFap() {
                                 );
                             }
 
-                            const record =
-                                recordsByDate[calendarDay.date];
+                            const record = recordsByDate[day.date];
 
-                            const isFapDay =
-                                record?.didFap === true;
-
-                            const isCleanDay =
-                                record?.didFap === false;
+                            const didFap = record?.didFap === true;
+                            const stayedClean = record?.didFap === false;
 
                             return (
                                 <div
-                                    key={calendarDay.date}
-                                    className={`min-h-[58px] rounded-xl p-1 text-center ${isFapDay
+                                    key={day.date}
+                                    className={`min-h-[58px] rounded-xl p-1 text-center ${
+                                        didFap
                                             ? "bg-gray-200"
-                                            : isCleanDay
+                                            : stayedClean
                                                 ? "bg-gray-50"
                                                 : "bg-white"
-                                        }`}
+                                    }`}
                                 >
-
-                                    {/* Day number */}
                                     <p className="text-xs font-bold text-gray-500">
-                                        {calendarDay.day}
+                                        {day.day}
                                     </p>
 
-                                    {/* Fapped */}
-                                    {isFapDay && (
-                                        <>
-                                            <div className="mt-1 flex justify-center">
-
-                                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-white">
-                                                    <X size={15} />
-                                                </div>
-
+                                    {didFap && (
+                                        <div className="mt-1 flex justify-center">
+                                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-white">
+                                                <X size={15} />
                                             </div>
-
-                                            <p className="mt-1 text-[10px] font-bold">
-                                                ₹{record.penaltyAmount}
-                                            </p>
-                                        </>
+                                        </div>
                                     )}
 
-                                    {/* Clean */}
-                                    {isCleanDay && (
+                                    {stayedClean && (
                                         <div className="mt-2 flex justify-center">
                                             <Check
                                                 size={18}
@@ -417,36 +355,111 @@ export default function NoFap() {
                                             />
                                         </div>
                                     )}
-
                                 </div>
                             );
                         })}
-
                     </div>
 
-                    {/* Calendar legend */}
-                    <div className="mt-4 flex items-center justify-center gap-5 text-xs text-gray-500">
-
-                        <div className="flex items-center gap-1">
+                    <div className="mt-4 flex justify-center gap-5 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
                             <X size={14} />
                             Fapped
-                        </div>
+                        </span>
 
-                        <div className="flex items-center gap-1">
+                        <span className="flex items-center gap-1">
                             <Check size={14} />
                             Clean
-                        </div>
-
+                        </span>
                     </div>
-
                 </div>
 
-                {/* ================================
-                    MAIN QUESTION
-                ================================= */}
+                {/* WORK DONE CALENDAR */}
+
+                <div className="rounded-3xl bg-white p-5 shadow-sm">
+                    <h2 className="mb-4 text-xl font-bold">
+                        Work Done Calendar
+                    </h2>
+
+                    <CalendarHeader />
+
+                    <div className="grid grid-cols-7 gap-1">
+                        {calendarDays.map((day, index) => {
+                            if (!day) {
+                                return (
+                                    <div
+                                        key={`work-empty-${index}`}
+                                        className="min-h-[58px]"
+                                    />
+                                );
+                            }
+
+                            const record = workRecordsByDate[day.date];
+
+                            const didWork = record
+                                ? (
+                                    record.didWork ??
+                                    record.done ??
+                                    false
+                                )
+                                : null;
+
+                            return (
+                                <div
+                                    key={day.date}
+                                    className={`min-h-[58px] rounded-xl p-1 text-center ${
+                                        didWork === true
+                                            ? "bg-green-50"
+                                            : record
+                                                ? "bg-red-50"
+                                                : "bg-white"
+                                    }`}
+                                >
+                                    <p className="text-xs font-bold text-gray-500">
+                                        {day.day}
+                                    </p>
+
+                                    {record && (
+                                        <div className="mt-2 flex justify-center">
+                                            {didWork === true ? (
+                                                <Check
+                                                    size={18}
+                                                    className="text-green-600"
+                                                />
+                                            ) : (
+                                                <X
+                                                    size={18}
+                                                    className="text-red-500"
+                                                />
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="mt-4 flex justify-center gap-5 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                            <Check
+                                size={14}
+                                className="text-green-600"
+                            />
+                            YES
+                        </span>
+
+                        <span className="flex items-center gap-1">
+                            <X
+                                size={14}
+                                className="text-red-500"
+                            />
+                            NO
+                        </span>
+                    </div>
+                </div>
+
+                {/* NO FAP QUESTION */}
 
                 <div className="rounded-3xl bg-white p-6 shadow-sm">
-
                     <p className="text-sm text-gray-500">
                         {formatDisplayDate(reportedDate)}
                     </p>
@@ -455,134 +468,69 @@ export default function NoFap() {
                         Did you fap yesterday?
                     </h2>
 
-                    {/* ==============================
-                    ANSWER BUTTONS
-                =============================== */}
+                    <div className="mt-6 grid grid-cols-2 gap-3">
+                        <button
+                            disabled={!!yesterdayNoFapRecord || isSavingNoFap}
+                            onClick={() => handleNoFapAnswer(true)}
+                            className={`rounded-2xl px-5 py-4 font-bold disabled:cursor-not-allowed ${
+                                yesterdayNoFapRecord?.didFap === true
+                                    ? "bg-red-600 text-white"
+                                    : "bg-gray-100 text-black"
+                            }`}
+                        >
+                            YES
+                        </button>
 
-                {!todayRecord ? (
-                    <>
-                        <div className="mt-6 grid grid-cols-2 gap-3">
+                        <button
+                            disabled={!!yesterdayNoFapRecord || isSavingNoFap}
+                            onClick={() => handleNoFapAnswer(false)}
+                            className={`rounded-2xl px-5 py-4 font-bold disabled:cursor-not-allowed ${
+                                yesterdayNoFapRecord?.didFap === false
+                                    ? "bg-green-600 text-white"
+                                    : "bg-gray-100 text-black"
+                            }`}
+                        >
+                            NO
+                        </button>
+                    </div>
+                </div>
 
-                            {/* YES */}
-                            <button
-                                type="button"
-                                disabled={isSaving}
-                                onClick={() => setShowConfirmModal(true)}
-                                className="rounded-2xl bg-black px-5 py-4 text-lg font-bold text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                YES
-                            </button>
+                {/* WORK QUESTION */}
 
-                            {/* NO */}
-                            <button
-                                type="button"
-                                disabled={isSaving}
-                                onClick={() => handleAnswer(false)}
-                                className="rounded-2xl border-2 border-black bg-white px-5 py-4 text-lg font-bold text-black transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                NO
-                            </button>
+                <div className="rounded-3xl bg-white p-6 shadow-sm">
+                    <p className="text-sm text-gray-500">
+                        {formatDisplayDate(reportedDate)}
+                    </p>
 
-                        </div>
+                    <h2 className="mt-3 text-2xl font-bold">
+                        Did you complete your work yesterday?
+                    </h2>
 
-                        {showConfirmModal && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                                <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-xl">
-                                    <h3 className="text-xl font-bold text-black">Are you sure?</h3>
-                                    <p className="mt-2 text-sm text-neutral-600">
-                                        Do you have Active Shield ?.
-                                    </p>
+                    <div className="mt-6 grid grid-cols-2 gap-3">
+                        <button
+                            disabled={!!yesterdayWorkRecord || isSavingWork}
+                            onClick={() => handleWorkAnswer(true)}
+                            className={`rounded-2xl px-5 py-4 font-bold disabled:cursor-not-allowed ${
+                                workAnswer === true
+                                    ? "bg-green-600 text-white"
+                                    : "bg-gray-100 text-black"
+                            }`}
+                        >
+                            YES
+                        </button>
 
-                                    <div className="mt-6 grid grid-cols-2 gap-3">
-                                        {/*  YES */}
-                                        <button
-                                            type="button"
-                                            disabled={isSaving}
-                                            onClick={() => {
-                                                setShowConfirmModal(false);
-                                                handleAnswer(false);
-                                            }}
-                                            className="rounded-2xl bg-black px-4 py-3 font-bold text-white transition active:scale-95 disabled:opacity-50"
-                                        >
-                                            YES
-                                        </button>
-
-                                        {/*  / NO */}
-                                        <button
-                                            type="button"
-                                            disabled={isSaving}
-                                                onClick={() => {
-                                                    setShowConfirmModal(false);
-                                                    handleAnswer(true);
-
-                                                }}
-                                            className="rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition active:scale-95 disabled:opacity-50"
-                                        >
-                                            NO
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </>
-                ) : (
-                            <div className="mt-6 rounded-2xl bg-gray-100 p-5">
-                            {/* Recorded status */}
-                            <div className="flex items-center gap-2">
-                                <Lock size={18} />
-
-                                <p className="font-bold">
-                                    Answer Recorded
-                                </p>
-                            </div>
-
-                            {/* Saved answer */}
-                            <p className="mt-2 text-gray-600">
-                                You answered:{" "}
-                                <span className="font-bold text-black">
-                                    {todayRecord.didFap
-                                        ? "YES"
-                                        : "NO"}
-                                </span>
-                            </p>
-
-                            {/* ==========================
-                                AMOUNT TO DONATE
-                            =========================== */}
-
-                            <div className="mt-4 rounded-2xl bg-white p-4">
-
-                                <p className="text-xs text-gray-500">
-                                    Amount to Donate
-                                </p>
-
-                                <p className="text-3xl font-bold">
-                                    ₹{todayRecord.penaltyAmount}
-                                </p>
-
-                            </div>
-
-                            {/* ==========================
-                                MESSAGE
-                            =========================== */}
-
-                            {todayRecord.didFap && (
-                                <p className="mt-4 text-sm font-medium text-gray-700">
-                                    You fucked up ?? Now donate and feel the pain of time loss.
-                                </p>
-                            )}
-
-                            {/* Clean message */}
-                            {!todayRecord.didFap && (
-                                <div className="mt-4 flex items-center gap-2 text-sm font-medium">
-                                    <Check size={18} />
-                                    Clean day recorded.
-                                </div>
-                            )}
-
-                        </div>
-                    )}
-
+                        <button
+                            disabled={!!yesterdayWorkRecord || isSavingWork}
+                            onClick={() => handleWorkAnswer(false)}
+                            className={`rounded-2xl px-5 py-4 font-bold disabled:cursor-not-allowed ${
+                                yesterdayWorkRecord && workAnswer === false
+                                    ? "bg-red-600 text-white"
+                                    : "bg-gray-100 text-black"
+                            }`}
+                        >
+                            NO
+                        </button>
+                    </div>
                 </div>
 
             </div>

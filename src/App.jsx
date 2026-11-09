@@ -1,10 +1,6 @@
-// Import React state and effect hooks.
-import {
-  useEffect,
-  useState,
-} from "react";
 
-// Import all application pages.
+import { useEffect, useState } from "react";
+
 import Trading from "./pages/trading";
 import JourneyMap from "./pages/journeyMap";
 import PhaseHistory from "./pages/phaseHistory";
@@ -13,279 +9,129 @@ import Gym from "./pages/gym";
 import NoFap from "./pages/noFap";
 import Data from "./pages/data";
 
-// Import Google Drive backup functions.
-import {
-  createGoogleDriveBackup,
-  GOOGLE_DRIVE_REAUTH_REQUIRED,
-} from "./services/googleDriveServices";
+import { exportDatabase } from "./data/database";
 
-// Import database export function.
-import {
-  exportDatabase,
-} from "./data/database";
+// =================================================
+// LOCAL AUTOMATIC BACKUP SETTINGS
+// =================================================
 
-// =========================================================
-// GOOGLE DRIVE AUTOMATIC BACKUP SETTINGS
-// =========================================================
+const LOCAL_BACKUP_LAST_KEY =
+  "lifeGame.localBackup.lastBackupAt";
 
-// Remember whether Google Drive has been connected.
-const GOOGLE_DRIVE_CONNECTED_KEY =
-  "lifeGame.googleDrive.connected";
+const BACKUP_INTERVAL = 24 * 60 * 60 * 1000;
 
-// Remember when the last successful backup happened.
-const GOOGLE_DRIVE_LAST_BACKUP_KEY =
-  "lifeGame.googleDrive.lastBackupAt";
+// =================================================
+// DOWNLOAD LOCAL BACKUP
+// =================================================
 
-// Remember when Google Drive needs the user
-// to reconnect their Google account.
-const GOOGLE_DRIVE_REAUTH_KEY =
-  "lifeGame.googleDrive.reauthRequired";
-
-// Automatic backup interval: 24 hours.
-const GOOGLE_DRIVE_BACKUP_INTERVAL =
-  24 * 60 * 60 * 1000;
-  
-// =========================================================
-// AUTOMATIC GOOGLE DRIVE BACKUP
-// =========================================================
-
-async function runAutomaticGoogleDriveBackup() {
+async function downloadLocalBackup() {
   try {
-    // Check whether Google Drive was previously connected.
-    const isConnected =
-      localStorage.getItem(
-        GOOGLE_DRIVE_CONNECTED_KEY
-      ) === "true";
+    const backup = await exportDatabase();
 
-    // Do nothing if Google Drive has never
-    // been connected.
-    if (!isConnected) {
-      return;
-    }
-
-    // Read the last successful backup timestamp.
-    const lastBackupAt =
-      Number(
-        localStorage.getItem(
-          GOOGLE_DRIVE_LAST_BACKUP_KEY
-        ) || 0
-      );
-
-    // Get the current time.
-    const now =
-      Date.now();
-
-    // Determine whether the backup is due.
-    const backupIsDue =
-      now - lastBackupAt >=
-      GOOGLE_DRIVE_BACKUP_INTERVAL;
-
-    // Do nothing when the backup is not due.
-    if (!backupIsDue) {
-      console.log(
-        "Google Drive backup is not due yet."
-      );
-
-      return;
-    }
-
-    // Export the current LIFE GAME database.
-    const backup =
-      await exportDatabase();
-
-    // Try to upload using only the current
-    // in-memory Google access token.
-    //
-    // IMPORTANT:
-    // This does NOT open an OAuth popup.
-    await createGoogleDriveBackup(
-      backup
+    const blob = new Blob(
+      [typeof backup === "string"
+        ? backup
+        : JSON.stringify(backup, null, 2)],
+      { type: "application/json" }
     );
 
-    // Save the successful backup time.
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "LIFE_GAME_BACKUP.json";
+
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
+
     localStorage.setItem(
-      GOOGLE_DRIVE_LAST_BACKUP_KEY,
+      LOCAL_BACKUP_LAST_KEY,
       String(Date.now())
     );
 
-    // Clear any previous reconnection warning.
-    localStorage.removeItem(
-      GOOGLE_DRIVE_REAUTH_KEY
-    );
+    console.log("Local backup downloaded successfully.");
 
-    // Confirm successful automatic backup.
-    console.log(
-      "LIFE GAME automatic Google Drive backup completed."
-    );
   } catch (error) {
-    // If Google requires a new token, remember that
-    // the user needs to reconnect.
-    if (
-      error?.code ===
-      GOOGLE_DRIVE_REAUTH_REQUIRED
-    ) {
-      localStorage.setItem(
-        GOOGLE_DRIVE_REAUTH_KEY,
-        "true"
-      );
-
-      console.log(
-        "Google Drive needs reconnection."
-      );
-
-      return;
-    }
-
-    // Other automatic backup errors should never
-    // prevent LIFE GAME from loading.
-    console.error(
-      "Automatic Google Drive backup failed:",
-      error
-    );
+    console.error("Local backup failed:", error);
   }
 }
 
-// =========================================================
+// =================================================
+// CHECK AUTOMATIC BACKUP
+// =================================================
+
+async function checkLocalBackup() {
+  const lastBackupAt = Number(
+    localStorage.getItem(LOCAL_BACKUP_LAST_KEY) || 0
+  );
+
+  const now = Date.now();
+
+  if (now - lastBackupAt >= BACKUP_INTERVAL) {
+    await downloadLocalBackup();
+  }
+}
+
+// =================================================
 // APP ROOT
-// =========================================================
+// =================================================
 
 function App() {
-  // Keep track of the currently visible page.
-  const [
-    activePage,
-    setActivePage,
-  ] = useState("trading");
-
-  // =========================================================
-  // AUTOMATIC BACKUP ON APP LAUNCH
-  // =========================================================
+  const [activePage, setActivePage] = useState("trading");
 
   useEffect(() => {
-    // Run the automatic backup check once when
-    // the application is opened.
-    runAutomaticGoogleDriveBackup();
+    checkLocalBackup();
   }, []);
-
-  // =========================================================
-  // APPLICATION UI
-  // =========================================================
 
   return (
     <div>
 
-      {/* Show the Trading page. */}
       {activePage === "trading" && (
-        <Trading
-          setActivePage={
-            setActivePage
-          }
-        />
+        <Trading setActivePage={setActivePage} />
       )}
 
-      {/* Show the Journey Map page. */}
-      {activePage === "journeyMap" && (
-        <JourneyMap />
+      {activePage === "journeyMap" && <JourneyMap />}
+
+      {activePage === "phaseHistory" && <PhaseHistory />}
+
+      {activePage === "tradingLevelLadder" && (
+        <TradingLevelLadder />
       )}
 
-      {/* Show the Phase History page. */}
-      {activePage === "phaseHistory" && (
-        <PhaseHistory />
-      )}
+      {activePage === "gym" && <Gym />}
 
-      {/* Show the Trading Level Ladder page. */}
-      {activePage ===
-        "tradingLevelLadder" && (
-          <TradingLevelLadder />
-        )}
+      {activePage === "noFap" && <NoFap />}
 
-      {/* Show the Gym page. */}
-      {activePage === "gym" && (
-        <Gym />
-      )}
-
-      {/* Show the No Fap page. */}
-      {activePage === "noFap" && (
-        <NoFap />
-      )}
-
-      {/* Show the Data / Import / Export page. */}
-      {activePage === "data" && (
-        <Data />
-      )}
-
-      {/* =====================================================
-          BOTTOM NAVIGATION
-          ===================================================== */}
+      {activePage === "data" && <Data />}
 
       <nav className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/95 backdrop-blur">
-
         <div className="mx-auto flex max-w-md justify-around py-3 text-xs font-bold text-slate-400">
 
-          {/* Trading navigation button. */}
-          <button
-            onClick={() =>
-              setActivePage(
-                "trading"
-              )
-            }
-            className={
-              activePage ===
-                "trading"
-                ? "text-slate-900"
-                : ""
-            }
-          >
-            Trading
-          </button>
-
-          {/* Gym navigation button. */}
-          <button
-            onClick={() =>
-              setActivePage(
-                "gym"
-              )
-            }
-            className={
-              activePage === "gym"
-                ? "text-slate-900"
-                : ""
-            }
-          >
-            Gym
-          </button>
-
-          {/* No Fap navigation button. */}
-          <button
-            onClick={() =>
-              setActivePage(
-                "noFap"
-              )
-            }
-            className={
-              activePage ===
-                "noFap"
-                ? "text-slate-900"
-                : ""
-            }
-          >
-            Fap Penality
-          </button>
-
-          {/* Data navigation button. */}
-          <button
-            onClick={() =>
-              setActivePage(
-                "data"
-              )
-            }
-            className={
-              activePage === "data"
-                ? "text-slate-900"
-                : ""
-            }
-          >
-            Import/Export
-          </button>
+          {[
+            ["trading", "Trading"],
+            ["gym", "Gym"],
+            ["noFap", "Discipline"],
+            ["data", "Backup/Restore"],
+          ].map(([page, label]) => (
+            <button
+              key={page}
+              onClick={() => setActivePage(page)}
+              className={
+                activePage === page
+                  ? "text-slate-900"
+                  : ""
+              }
+            >
+              {label}
+            </button>
+          ))}
 
         </div>
       </nav>
